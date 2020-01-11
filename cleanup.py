@@ -27,8 +27,12 @@ def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
             shutil.copy2(original, dest)
 
 
-def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.jpg'):
+def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.jpg', exclude_folders=None):
     for file in source_gen:
+        if ((exclude_folders is not None) and
+                (any([exc in str(file.parents[0]) for exc in exclude_folders]))):
+            continue
+
         print('-' * 50)
         try:
             exif_orig = utils.read_exif(file, quiet=False)
@@ -43,6 +47,8 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
                         print(f'{file.name} is duplicate of {res_path.name}')
                         continue
                 except AttributeError:
+                    with open('missing.txt', 'a') as file:
+                        file.write(f'{file}, {res_path.relative_to(dest_parent)}\n')
                     pass
 
             res_path = utils.get_unique_filename(res_path)
