@@ -1,6 +1,6 @@
 from exif import Image
 from datetime import datetime
-
+from pathlib import Path
 
 class ExifException(Exception):
     pass

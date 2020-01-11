@@ -12,9 +12,11 @@ ATTRIBUTES = [
             ]
 
 
-def copy_and_sort(source, dest_parent, ext='jpg'):
-    file_gen = Path(source).glob(f'**\*.{ext}')
-    for source, dest in sort_gen(file_gen, dest_parent):
+def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
+    glob_pattern = f'**\*.{ext}' if recursive else f'*.{ext}'
+    file_generator = Path(source).glob(glob_pattern)
+    sorted_files = sort_gen(file_generator, dest_parent, **kwargs)
+    for original, dest in sorted_files:
         # create parent directory for new file if it doesn't exist
         if not dest.parents[0].exists():
             dest.parents[0].mkdir(parents=True)
@@ -22,7 +24,7 @@ def copy_and_sort(source, dest_parent, ext='jpg'):
         # double-check that we're not about to overwrite anything
         if not dest.exists():
             print(f'Copying {dest.relative_to(dest_parent)}')
-            shutil.copy2(source, dest)
+            shutil.copy2(original, dest)
 
 
 def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.jpg'):
@@ -41,13 +43,14 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
                         print(f'{file.name} is duplicate of {res_path.name}')
                         continue
                 except AttributeError:
-                    continue
+                    pass
 
             res_path = utils.get_unique_filename(res_path)
             print(f'New file: {res_path.relative_to(dest_parent)}')
             yield file, res_path
+
         except utils.ExifException as e:
-            print(f'Problem reading exif data from {e}, skipping')
+            print(f'Problem reading exif data from {e}, skipping file')
             continue
 
 
@@ -59,10 +62,3 @@ def check_duplicates(exif_data1, exif_data2):
     # otherwise try to match all the attributes in ATTRIBUTES
     else:
         return all([getattr(exif_data1, att) == getattr(exif_data2, att) for att in ATTRIBUTES])
-
-
-if __name__ == '__main__':
-    # p = Path(r'M:\ARCHIVE\Pictures\Backups\2015-11-29 13.52.28\DCIM\Camera')
-    p = Path(r'M:\ARCHIVE\Pictures\Backups\2015-11-29 13.06.32')
-    dest = Path('M:\ARCHIVE\Pictures\_cleaned')
-    copy_and_sort(p, dest, 'jpg')
