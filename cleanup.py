@@ -1,7 +1,8 @@
+import datetime
 import re
-from datetime import datetime, timedelta
+import shutil
 from pathlib import Path
-from shutil import move
+from typing import List
 
 import numpy as np
 from exif import Image
@@ -24,10 +25,10 @@ def copy_and_rename(source_path, destination_path, filename_format:str = '%Y-%m-
 
         # get the date from the exif data
         try:
-            pic_date = datetime.strptime(exif_data.datetime_original, '%Y:%m:%d %H:%M:%S')
+            pic_date = datetime.datetime.strptime(exif_data.datetime_original, '%Y:%m:%d %H:%M:%S')
         except AttributeError as e:
             # sometimes there's only a 'datetime' attribute
-            pic_date = datetime.strptime(exif_data.datetime, '%Y:%m:%d %H:%M:%S')
+            pic_date = datetime.datetime.strptime(exif_data.datetime, '%Y:%m:%d %H:%M:%S')
 
         # generate path for new file
         newfile = get_unique_filename(destination_path / pic_date.strftime(filename_format))
@@ -58,33 +59,66 @@ def sort_folder(path):
         group_folder = path / f'{start.strftime(date_format)} to {end.strftime(date_format)}'
         group_folder.mkdir(parents=True)
         for file in group:
-            move(str(file), str(group_folder / file.name))
+            shutil.move(str(file), str(group_folder / file.name))
 
 
 def group_dates(path, num_days=3, glob='*.jpg'):
     files = [f for f in path.glob(glob)]
     dates = [datetime_from_filename(f) for f in files]
-    cuts = np.argwhere(np.diff(dates) > timedelta(days=num_days)).flatten() + 1
+    cuts = np.argwhere(np.diff(dates) > datetime.timedelta(days=num_days)).flatten() + 1
     groups = np.split(files, cuts)
     return groups
 
 
 DATE_REGEX = re.compile('^\d+-\d+-\d+_\d+\.\d+\.\d+')
-def datetime_from_filename(path):
-    date_str = DATE_REGEX.match(path.stem).group()
+def datetime_from_filename(path, regex=None):
+    regex = regex or DATE_REGEX
+    date_str = regex.match(path.stem).group()
     return datetime.strptime(date_str, '%Y-%m-%d_%H.%M.%S')
 
+def copy_and_sort(
+        source_path,
+        dest_path,
+        collect_func = None,
+        sort_func = None):
 
-if __name__ == '__main__':
-    source_folders = [
-        r'M:\ARCHIVE\Pictures\2013',
-        r'M:\ARCHIVE\Pictures\2014',
-        r'M:\ARCHIVE\Pictures\Camping'
-    ]
-    dest_folder = Path(r'M:\ARCHIVE\Pictures\_cleaned')
-    for folder in source_folders:
-        copy_and_rename(
-            source_path=folder,
-            destination_path=dest_folder
-        )
-        sort_folder(dest_folder)
+    source_path = Path(source_path)
+    assert source_path.exists()
+
+    dest_path = Path(dest_path)
+    if not dest_path.exists():
+        dest_path.mkdir(parents=True)
+
+    # gather all files into a single list
+    collect_func = collect_func or gather_jpg
+    files = collect_func(source_path)
+
+    # generate destination paths
+    # sort_func is a Tuple (function_pointer, arg1, arg2, arg3...)
+    sort_func = sort_func or (gen_date_paths, dest_path)
+    # calls the function pointer with the list of file Paths as the first argument and the rest of the Tuple as further positional arguments
+    res_paths = sort_func[0](files, *sort_func[1:])
+
+    for source, dest in zip(files, res_paths):
+        # https://docs.python.org/3/library/shutil.html#shutil.copy2
+        shutil.copy2(source, dest)
+
+def gather_jpg(source_path: Path) -> List[Path]:
+    return [f for f in source_path.glob('**\*.jpg')]
+
+def gen_date_paths(files: List[Path], dest_parent: Path, filename_format:str = '%Y-%m-%d_%H.%M.%S.jpg') -> List[Path]:
+    print(f'Reading exif data from {len(files)} files...')
+    dates = [read_exif_date(f) for f in files]
+    res = [dest_parent / d.strftime('%Y') / d.strftime('%B') / d.strftime(filename_format) for i, d in enumerate(dates)]
+    return res
+
+def read_exif_date(path: Path) -> datetime.datetime:
+    with path.open('rb') as file:
+        exif_data = Image(file)
+
+    if hasattr(exif_data, 'datetime_original'):
+        date_str = exif_data.datetime_original
+    elif hasattr(exif_data, 'datetime'):
+        date_str = exif_data.datetime
+
+    return datetime.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
