@@ -48,22 +48,22 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
             res_path = dest_parent / pic_date.strftime('%Y') / pic_date.strftime('%m - %B') / pic_date.strftime(filename_format)
 
             if res_path.exists():
-                LOGGER.debug(f'pre-existing file: {file}, {res_path.relative_to(dest_parent)}')
+                LOGGER.debug(f'pre-existing file: "{file}", "{res_path.relative_to(dest_parent)}"')
                 dest_exif = utils.read_exif(res_path)
                 try:
                     if check_duplicates(exif_orig, dest_exif):
-                        LOGGER.warning(f'duplicates: {file}, {res_path.relative_to(dest_parent)}')
+                        LOGGER.warning(f'duplicates: "{file}", "{res_path.relative_to(dest_parent)}"')
                         continue
                 except AttributeError:
                     for att in ATTRIBUTES:
                         if not hasattr(exif_orig, att):
-                            LOGGER.error(f'missing exif field: {att}, {file}')
+                            LOGGER.error(f'missing exif field: "{att}", "{file}"')
                         if not hasattr(dest_exif, att):
-                            LOGGER.error(f'missing exif field: {att}, {res_path}')
+                            LOGGER.error(f'missing exif field: "{att}", "{res_path}"')
                     pass
 
             res_path = utils.get_unique_filename(res_path)
-            LOGGER.info(f'new file: {file}, {res_path.relative_to(dest_parent)}')
+            LOGGER.info(f'new file: "{file}", "{res_path.relative_to(dest_parent)}"')
             yield file, res_path
 
         except utils.ExifException as e:
