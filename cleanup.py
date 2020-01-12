@@ -1,7 +1,7 @@
 import logging
 import shutil
 from pathlib import Path
-
+import os
 import utils
 
 ATTRIBUTES = [
@@ -51,9 +51,13 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
                 LOGGER.debug(f'pre-existing file: "{file}", "{res_path.relative_to(dest_parent)}"')
                 dest_exif = utils.read_exif(res_path)
                 try:
-                    if check_duplicates(exif_orig, dest_exif):
-                        LOGGER.warning(f'duplicates: "{file}", "{res_path.relative_to(dest_parent)}"')
+                    if check_duplicates_os(file, res_path):
+                        LOGGER.warning(f'duplicates os: "{file}", "{res_path.relative_to(dest_parent)}"')
                         continue
+                    else:
+                        if check_duplicates_exif(exif_orig, dest_exif):
+                            LOGGER.warning(f'duplicates exif: "{file}", "{res_path.relative_to(dest_parent)}"')
+                            continue
                 except AttributeError:
                     for att in ATTRIBUTES:
                         if not hasattr(exif_orig, att):
@@ -70,7 +74,14 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
             continue
 
 
-def check_duplicates(exif_data1, exif_data2):
+def check_duplicates_os(path1, path2):
+    stats1 = os.stat(path1)
+    stats2 = os.stat(path2)
+    check_attributes = ['st_mtime', 'st_mtime_ns', 'st_size']
+    return all([getattr(stats1, att) == getattr(stats2, att) for att in check_attributes])
+
+
+def check_duplicates_exif(exif_data1, exif_data2):
     # if both sets of data have the image_unique_id field, that's pretty easy to use
     unique_tag = 'image_unique_id'
     if hasattr(exif_data1, unique_tag) and hasattr(exif_data2, unique_tag):
