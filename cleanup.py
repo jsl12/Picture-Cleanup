@@ -1,6 +1,5 @@
 import logging
 import shutil
-import sys
 from pathlib import Path
 
 import utils
@@ -15,17 +14,6 @@ ATTRIBUTES = [
 
 
 LOGGER = logging.getLogger(__name__)
-print_stream = logging.StreamHandler(sys.stdout)
-print_stream.setLevel(logging.INFO)
-log_file = logging.FileHandler('pic_cleanup.log', 'w')
-log_file.setLevel(logging.DEBUG)
-logging.basicConfig(
-    level=logging.DEBUG,
-    handlers=[
-        print_stream,
-        log_file
-    ]
-)
 
 
 def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
@@ -64,14 +52,14 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
                 dest_exif = utils.read_exif(res_path)
                 try:
                     if check_duplicates(exif_orig, dest_exif):
-                        LOGGER.info(f'duplicates: {file}, {res_path.relative_to(dest_parent)}')
+                        LOGGER.warning(f'duplicates: {file}, {res_path.relative_to(dest_parent)}')
                         continue
                 except AttributeError:
                     for att in ATTRIBUTES:
                         if not hasattr(exif_orig, att):
-                            LOGGER.warning(f'missing exif field: {att}, {file}')
+                            LOGGER.error(f'missing exif field: {att}, {file}')
                         if not hasattr(dest_exif, att):
-                            LOGGER.warning(f'missing exif field: {att}, {res_path}')
+                            LOGGER.error(f'missing exif field: {att}, {res_path}')
                     pass
 
             res_path = utils.get_unique_filename(res_path)
