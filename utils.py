@@ -5,7 +5,6 @@ from pathlib import Path
 class ExifException(Exception):
     pass
 
-
 def read_exif(path, quiet=True) -> Image:
     if not quiet:
         print(f'Reading exif data from {path.name}')
@@ -17,13 +16,16 @@ def read_exif(path, quiet=True) -> Image:
 
 
 def extract_date_from_exif(exif_data: Image) -> datetime:
-    if hasattr(exif_data, 'datetime_original'):
-        date_str = exif_data.datetime_original
-    elif hasattr(exif_data, 'datetime'):
-        date_str = exif_data.datetime
-    else:
-        raise AttributeError(f'Could not determine date from exif data')
-    return datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+    try:
+        if hasattr(exif_data, 'datetime_original'):
+            date_str = exif_data.datetime_original
+        elif hasattr(exif_data, 'datetime'):
+            date_str = exif_data.datetime
+        else:
+            raise AttributeError(f'Could not determine date from exif data')
+        return datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+    except:
+        raise ExifException(exif_data)
 
 
 def get_unique_filename(path: Path) -> Path:

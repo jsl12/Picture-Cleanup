@@ -17,14 +17,20 @@ def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
     file_generator = Path(source).glob(glob_pattern)
     sorted_files = sort_gen(file_generator, dest_parent, **kwargs)
     for original, dest in sorted_files:
-        # create parent directory for new file if it doesn't exist
-        if not dest.parents[0].exists():
-            dest.parents[0].mkdir(parents=True)
+        try:
+            # create parent directory for new file if it doesn't exist
+            if not dest.parents[0].exists():
+                dest.parents[0].mkdir(parents=True)
 
-        # double-check that we're not about to overwrite anything
-        if not dest.exists():
-            print(f'Copying {dest.relative_to(dest_parent)}')
-            shutil.copy2(original, dest)
+            # double-check that we're not about to overwrite anything
+            if not dest.exists():
+                print(f'Copying {dest.relative_to(dest_parent)}')
+                shutil.copy2(original, dest)
+        except Exception as e:
+            with open('exceptions.txt', 'a') as file:
+                file.write(('-' * 50) + '\n')
+                file.write(f'{repr(e)}\n')
+                file.write(f'{original.relative_to(source)}, {dest.relative_to(dest_parent)}\n')
 
 
 def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.jpg', exclude_folders=None):
@@ -47,8 +53,8 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
                         print(f'{file.name} is duplicate of {res_path.name}')
                         continue
                 except AttributeError:
-                    with open('missing.txt', 'a') as file:
-                        file.write(f'{file}, {res_path.relative_to(dest_parent)}\n')
+                    with open('missing.txt', 'a') as f:
+                        f.write(f'{file}, {res_path.relative_to(dest_parent)}\n')
                     pass
 
             res_path = utils.get_unique_filename(res_path)
