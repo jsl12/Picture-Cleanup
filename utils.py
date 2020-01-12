@@ -9,7 +9,7 @@ class ExifException(Exception):
     pass
 
 def read_exif(path) -> Image:
-    LOGGER.info(f'read_exif: {path}')
+    LOGGER.info(f'read_exif: "{path}"')
     with path.open('rb') as file:
         try:
             return Image(file)
@@ -36,7 +36,7 @@ def get_unique_filename(path: Path) -> Path:
     if path.exists():
         files = [f for f in path.parents[0].glob(f'{path.stem}*')]
         res = path.with_name(f'{path.stem}({len(files)}){path.suffix}')
-        LOGGER.debug(f'unique filepath: {res}')
+        LOGGER.debug(f'unique filepath: "{res}"')
         return res
     else:
         return path
