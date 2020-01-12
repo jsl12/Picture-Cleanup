@@ -1,4 +1,6 @@
+import logging
 import shutil
+import sys
 from pathlib import Path
 
 import utils
@@ -12,6 +14,20 @@ ATTRIBUTES = [
             ]
 
 
+LOGGER = logging.getLogger(__name__)
+print_stream = logging.StreamHandler(sys.stdout)
+print_stream.setLevel(logging.INFO)
+log_file = logging.FileHandler('pic_cleanup.log', 'w')
+log_file.setLevel(logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[
+        print_stream,
+        log_file
+    ]
+)
+
+
 def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
     glob_pattern = f'**\*.{ext}' if recursive else f'*.{ext}'
     file_generator = Path(source).glob(glob_pattern)
@@ -21,16 +37,15 @@ def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
             # create parent directory for new file if it doesn't exist
             if not dest.parents[0].exists():
                 dest.parents[0].mkdir(parents=True)
+                LOGGER.debug(f'mkdir: {dest.parents[0]}')
 
             # double-check that we're not about to overwrite anything
             if not dest.exists():
-                print(f'Copying {dest.relative_to(dest_parent)}')
+                LOGGER.info(f'start copy: {original}, {dest}')
                 shutil.copy2(original, dest)
+                LOGGER.info(f'end copy: {original}, {dest}')
         except Exception as e:
-            with open('exceptions.txt', 'a') as file:
-                file.write(('-' * 50) + '\n')
-                file.write(f'{repr(e)}\n')
-                file.write(f'{original.relative_to(source)}, {dest.relative_to(dest_parent)}\n')
+            LOGGER.exception(repr(e))
 
 
 def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.jpg', exclude_folders=None):
@@ -39,30 +54,31 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
                 (any([exc in str(file.parents[0]) for exc in exclude_folders]))):
             continue
 
-        print('-' * 50)
         try:
-            exif_orig = utils.read_exif(file, quiet=False)
+            exif_orig = utils.read_exif(file)
             pic_date = utils.extract_date_from_exif(exif_orig)
             res_path = dest_parent / pic_date.strftime('%Y') / pic_date.strftime('%B') / pic_date.strftime(filename_format)
 
             if res_path.exists():
-                print(f'{res_path.name} already exists, checking for duplicates')
-                dest_exif = utils.read_exif(res_path, quiet=False)
+                LOGGER.debug(f'pre-existing file: {file}, {res_path.relative_to(dest_parent)}')
+                dest_exif = utils.read_exif(res_path)
                 try:
                     if check_duplicates(exif_orig, dest_exif):
-                        print(f'{file.name} is duplicate of {res_path.name}')
+                        LOGGER.info(f'duplicates: {file}, {res_path.relative_to(dest_parent)}')
                         continue
                 except AttributeError:
-                    with open('missing.txt', 'a') as f:
-                        f.write(f'{file}, {res_path.relative_to(dest_parent)}\n')
+                    for att in ATTRIBUTES:
+                        if not hasattr(exif_orig, att):
+                            LOGGER.warning(f'missing exif field: {att}, {file}')
+                        if not hasattr(dest_exif, att):
+                            LOGGER.warning(f'missing exif field: {att}, {res_path}')
                     pass
 
             res_path = utils.get_unique_filename(res_path)
-            print(f'New file: {res_path.relative_to(dest_parent)}')
+            LOGGER.info(f'new file: {file}, {res_path.relative_to(dest_parent)}')
             yield file, res_path
 
         except utils.ExifException as e:
-            print(f'Problem reading exif data from {e}, skipping file')
             continue
 
 
