@@ -1,18 +1,10 @@
 import logging
-import os
 import shutil
 from pathlib import Path
 from types import GeneratorType
+
+import metadata
 import utils
-
-ATTRIBUTES = [
-                # 'image_unique_id',
-                'make',
-                'model',
-                'image_height',
-                'image_width'
-            ]
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -43,56 +35,66 @@ def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
 
 def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.jpg', exclude_folders=None):
     for file in source_gen:
+        file = file.resolve()
         if ((exclude_folders is not None) and
                 (any([exc in str(file.parents[0]) for exc in exclude_folders]))):
+            LOGGER.debug(f'excluding: "{file}"')
             continue
 
         try:
-            exif_orig = utils.read_exif(file)
-            pic_date = utils.extract_date_from_exif(exif_orig)
+            metadata_original = {}
+            # try to add the exif metadata, keep going if it fails somehow
+            try:
+                metadata_original.update(metadata.read_exif_metadata(file))
+            except:
+                pass
+
+            # try to add the os metadata, keep going if it fails somehow
+            try:
+                metadata_original.update(metadata.read_os_metadata(file))
+            except:
+                pass
+
+            # generate the result path from whatever is in the metadata
+            pic_date = metadata.determine_date(metadata_original)
             res_path = Path(dest_parent) / pic_date.strftime('%Y') / pic_date.strftime('%m - %B') / pic_date.strftime(filename_format)
 
+            # check to see if the result already exists
             if res_path.exists():
+                metadata_target = {}
                 LOGGER.debug(f'pre-existing file: "{file}", "{res_path.relative_to(dest_parent)}"')
-                try:
-                    # check if the files are duplicates at the OS level first
-                    if check_duplicates_os(file, res_path):
-                        LOGGER.warning(f'duplicates os: "{file}", "{res_path.relative_to(dest_parent)}"')
-                        continue
+
+                # read os level metadata for the target
+                metadata_target.update(metadata.read_os_metadata(res_path))
+
+                # check if the files are duplicates at the OS level
+                if metadata.check_duplicates(metadata_target, metadata_original, type='os'):
+                    LOGGER.warning(f'duplicates os: "{file}", "{res_path.relative_to(dest_parent)}"')
+                    continue
+                else:
+                    # if not, read the exif metadata for the target
+                    try:
+                        metadata_target.update(metadata.read_exif_metadata(res_path))
+                    except:
+                        pass
+
+                    # if everything goes OK, check for duplicates again, with type 'exif'
                     else:
-                        # if not, check the exif data too
-                        dest_exif = utils.read_exif(res_path)
-                        if check_duplicates_exif(exif_orig, dest_exif):
+                        if metadata.check_duplicates(metadata_target, metadata_original, type='exif'):
+                            # if the metadata indicates duplicates, log and skip
                             LOGGER.warning(f'duplicates exif: "{file}", "{res_path.relative_to(dest_parent)}"')
                             continue
-                except AttributeError:
-                    for att in ATTRIBUTES:
-                        if not hasattr(exif_orig, att):
-                            LOGGER.error(f'missing exif field: "{att}", "{file}"')
-                        if not hasattr(dest_exif, att):
-                            LOGGER.error(f'missing exif field: "{att}", "{res_path}"')
-                    pass
 
+            # ensure there will be a unique filename
             res_path = utils.get_unique_filename(res_path)
             LOGGER.info(f'new file: "{file}", "{res_path.relative_to(dest_parent)}"')
             yield file, res_path
 
-        except utils.ExifException as e:
+        # If it hits a predictable exception, then just skip and continue
+        # MetaDataExceptions should all log themselves at the module level
+        except metadata.MetaDataException as e:
             continue
-
-
-def check_duplicates_os(path1, path2):
-    stats1 = os.stat(path1)
-    stats2 = os.stat(path2)
-    check_attributes = ['st_mtime', 'st_mtime_ns', 'st_size']
-    return all([getattr(stats1, att) == getattr(stats2, att) for att in check_attributes])
-
-
-def check_duplicates_exif(exif_data1, exif_data2):
-    # if both sets of data have the image_unique_id field, that's pretty easy to use
-    unique_tag = 'image_unique_id'
-    if hasattr(exif_data1, unique_tag) and hasattr(exif_data2, unique_tag):
-        return getattr(exif_data1, unique_tag) == getattr(exif_data2, unique_tag)
-    # otherwise try to match all the attributes in ATTRIBUTES
-    else:
-        return all([getattr(exif_data1, att) == getattr(exif_data2, att) for att in ATTRIBUTES])
+        # If it hits something unexpected, fully log it and continue
+        except Exception as e:
+            LOGGER.exception(repr(e))
+            continue
