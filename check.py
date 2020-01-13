@@ -1,5 +1,7 @@
-import log
+import shutil
 from pathlib import Path
+
+import log
 import utils
 
 
@@ -19,3 +21,8 @@ def find_source(logfile, target):
         paths = [Path(m.group(1)) for m in log.PATH_REGEX.finditer(line)]
         if paths[1] == target:
             return paths[0]
+
+def move_to_purgatory(logfile, purgatory_path):
+    files = set([path for line, path in log.errors(logfile)])
+    for f in files:
+        shutil.copy2(f, purgatory_path / f.name)
