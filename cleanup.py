@@ -43,17 +43,14 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
 
         try:
             metadata_original = {}
-            # try to add the exif metadata, keep going if it fails somehow
+            # read the exif metadata for the original file, keep going if it fails somehow
             try:
                 metadata_original.update(metadata.read_exif_metadata(file))
             except:
                 pass
 
-            # try to add the os metadata, keep going if it fails somehow
-            try:
-                metadata_original.update(metadata.read_os_metadata(file))
-            except:
-                pass
+            # read the os metadata for the original file
+            metadata_original.update(metadata.read_os_metadata(file))
 
             # generate the result path from whatever is in the metadata
             pic_date = metadata.determine_date(metadata_original)
@@ -61,6 +58,7 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
 
             # check to see if the result already exists
             if res_path.exists():
+                # if they do, check the metadata of the files
                 metadata_target = {}
                 LOGGER.debug(f'pre-existing file: "{file}", "{res_path.relative_to(dest_parent)}"')
 
@@ -69,6 +67,7 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
 
                 # check if the files are duplicates at the OS level
                 if metadata.check_duplicates(metadata_target, metadata_original, type='os'):
+                    # if they are, then skip
                     LOGGER.warning(f'duplicates os: "{file}", "{res_path.relative_to(dest_parent)}"')
                     continue
                 else:
@@ -76,6 +75,7 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
                     try:
                         metadata_target.update(metadata.read_exif_metadata(res_path))
                     except:
+                        # if reading the exif data from the target file fails, then consider not duplicates
                         pass
 
                     # if everything goes OK, check for duplicates again, with type 'exif'
