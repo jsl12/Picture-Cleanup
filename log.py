@@ -1,7 +1,23 @@
+import logging
 import re
+import sys
 from pathlib import Path
 
+
 PATH_REGEX = re.compile('"(.+?)"')
+
+
+def configure(file=None, stream_level=logging.WARNING, file_level=logging.DEBUG):
+    log_stream = logging.StreamHandler(sys.stdout)
+    log_stream.setLevel(stream_level)
+    handlers = [log_stream]
+
+    if file is not None:
+        file_logger = logging.FileHandler(file, 'w')
+        file_logger.setLevel(file_level)
+        handlers.append(file_logger)
+
+    logging.basicConfig(level=logging.DEBUG, handlers=handlers)
 
 
 def copied_files(logfile):
