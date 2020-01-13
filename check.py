@@ -24,6 +24,10 @@ def find_source(logfile, target):
 
 
 def move_to_purgatory(logfile, purgatory_path):
+    purgatory_path = Path(purgatory_path)
+    if not purgatory_path.exists():
+        purgatory_path.mkdir(parents=True)
+
     files = set([path for line, path in log.errors(logfile)])
     for f in files:
         shutil.copy2(f, Path(purgatory_path) / f.name)
