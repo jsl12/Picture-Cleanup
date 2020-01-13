@@ -1,5 +1,5 @@
-from pathlib import Path
 import re
+from pathlib import Path
 
 PATH_REGEX = re.compile('"(.+?)"')
 
@@ -14,7 +14,7 @@ def errors(logfile):
         if 'INFO' in line and 'read' in line:
             last_read = line
         elif 'ERROR' in line:
-            yield line, Path(PATH_REGEX.search(last_read).group(1))
+            yield line, get_paths(last_read)[0]
 
 
 def filter(line_gen, filter_str):
@@ -35,3 +35,7 @@ def line_gen(logfile):
         while line:
             line = file.readline()
             yield line.strip()
+
+
+def get_paths(line):
+    return [Path(m.group(1)) for m in PATH_REGEX.finditer(line)]
