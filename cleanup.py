@@ -50,7 +50,7 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
         try:
             exif_orig = utils.read_exif(file)
             pic_date = utils.extract_date_from_exif(exif_orig)
-            res_path = dest_parent / pic_date.strftime('%Y') / pic_date.strftime('%m - %B') / pic_date.strftime(filename_format)
+            res_path = Path(dest_parent) / pic_date.strftime('%Y') / pic_date.strftime('%m - %B') / pic_date.strftime(filename_format)
 
             if res_path.exists():
                 LOGGER.debug(f'pre-existing file: "{file}", "{res_path.relative_to(dest_parent)}"')
