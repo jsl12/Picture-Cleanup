@@ -54,7 +54,6 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
 
             if res_path.exists():
                 LOGGER.debug(f'pre-existing file: "{file}", "{res_path.relative_to(dest_parent)}"')
-                dest_exif = utils.read_exif(res_path)
                 try:
                     # check if the files are duplicates at the OS level first
                     if check_duplicates_os(file, res_path):
@@ -62,6 +61,7 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
                         continue
                     else:
                         # if not, check the exif data too
+                        dest_exif = utils.read_exif(res_path)
                         if check_duplicates_exif(exif_orig, dest_exif):
                             LOGGER.warning(f'duplicates exif: "{file}", "{res_path.relative_to(dest_parent)}"')
                             continue
