@@ -80,10 +80,14 @@ def sort_gen(source_gen, dest_parent, filename_format:str = '%Y-%m-%d_%H.%M.%S.j
 
                     # if everything goes OK, check for duplicates again, with type 'exif'
                     else:
-                        if metadata.check_duplicates(metadata_target, metadata_original, type='exif'):
-                            # if the metadata indicates duplicates, log and skip
-                            LOGGER.warning(f'duplicates exif: "{file}", "{res_path.relative_to(dest_parent)}"')
-                            continue
+                        try:
+                            if metadata.check_duplicates(metadata_target, metadata_original, type='exif'):
+                                # if the metadata indicates duplicates, log and skip
+                                LOGGER.warning(f'duplicates exif: "{file}", "{res_path.relative_to(dest_parent)}"')
+                                continue
+                        except metadata.MissingComparisonField as e:
+                            # if a field is missing, consider not a duplicate
+                            pass
 
             # ensure there will be a unique filename
             res_path = utils.get_unique_filename(res_path)
