@@ -18,7 +18,7 @@ def check_exif(logfile):
 
 def find_source(logfile, target):
     for line in log.filter(log.line_gen(logfile), 'end copy'):
-        paths = [Path(m.group(1)) for m in log.PATH_REGEX.finditer(line)]
+        paths = log.get_paths(line)
         if paths[1] == target:
             return paths[0]
 
