@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
-
+from types import GeneratorType
 import utils
 
 ATTRIBUTES = [
@@ -18,8 +18,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
-    glob_pattern = f'**\*.{ext}' if recursive else f'*.{ext}'
-    file_generator = Path(source).glob(glob_pattern)
+    if isinstance(source, GeneratorType):
+        file_generator = source
+    else:
+        glob_pattern = f'**\*.{ext}' if recursive else f'*.{ext}'
+        file_generator = Path(source).glob(glob_pattern)
+
     sorted_files = sort_gen(file_generator, dest_parent, **kwargs)
     for original, dest in sorted_files:
         try:
