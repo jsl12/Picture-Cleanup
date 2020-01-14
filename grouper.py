@@ -5,6 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
+import utils
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -66,3 +68,4 @@ def sort_group(base_path, group_min_size=5, suffix=' - (desc)', **kwargs):
                 continue
             else:
                 LOGGER.info(f'move end: "{file}", "{res}"')
+    utils.remove_empty_dirs(base_path)
