@@ -2,3 +2,4 @@ exif
 numpy
 click
 pyyaml
+pandas

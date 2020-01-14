@@ -22,7 +22,7 @@ def configure(file=None, append=False, stream_level=logging.WARNING, file_level=
 
 def copied_files(logfile):
     for line in filter(line_gen(logfile), 'end copy'):
-        yield tuple([Path(path_str.group(1)) for path_str in PATH_REGEX.finditer(line)])
+        yield tuple(get_paths(line))
 
 
 def errors(logfile):
