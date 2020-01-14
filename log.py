@@ -7,13 +7,13 @@ from pathlib import Path
 PATH_REGEX = re.compile('"(.+?)"')
 
 
-def configure(file=None, stream_level=logging.WARNING, file_level=logging.DEBUG):
+def configure(file=None, append=False, stream_level=logging.WARNING, file_level=logging.DEBUG):
     log_stream = logging.StreamHandler(sys.stdout)
     log_stream.setLevel(stream_level)
     handlers = [log_stream]
 
     if file is not None:
-        file_logger = logging.FileHandler(file, 'w')
+        file_logger = logging.FileHandler(file, 'a' if append else 'w')
         file_logger.setLevel(file_level)
         handlers.append(file_logger)
 
