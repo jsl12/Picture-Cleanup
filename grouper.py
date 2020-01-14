@@ -1,6 +1,16 @@
-from pathlib import Path
+import logging
+import shutil
 from datetime import datetime, timedelta
+from pathlib import Path
+
 import numpy as np
+
+LOGGER = logging.getLogger(__name__)
+
+
+def files_and_dates(base_path, **kwargs):
+    files, dates = zip(*[(file, date) for file, date in file_date_gen(base_path, **kwargs)])
+    return list(files), list(dates)
 
 
 def file_date_gen(base_path, glob='**\*.jpg', date_format='%Y-%m-%d_%H.%M.%S'):
@@ -12,11 +22,6 @@ def file_date_gen(base_path, glob='**\*.jpg', date_format='%Y-%m-%d_%H.%M.%S'):
             if UNCONVERTED_STR in str(e):
                 uncoverted_portion = str(e).split(UNCONVERTED_STR)[1].strip()
                 yield file, datetime.strptime(file.stem[:-len(uncoverted_portion)], date_format)
-
-
-def files_and_dates(base_path, **kwargs):
-    files, dates = zip(*[(file, date) for file, date in file_date_gen(base_path, **kwargs)])
-    return list(files), list(dates)
 
 
 def get_groups(base_path, time_threshold=3, **kwargs):
@@ -33,8 +38,31 @@ def get_groups(base_path, time_threshold=3, **kwargs):
 
     return zip(file_groups, date_groups)
 
-def sort_group(base_path, group_threshold=5, **kwargs):
-    fmt = '%Y-%m-%d'
+def sort_group(base_path, group_min_size=5, suffix=' - (desc)', **kwargs):
+    fmt = '%m-%d'
     for files, dates in get_groups(base_path, **kwargs):
-        if len(files) >= group_threshold:
-            print(f'{dates[0].strftime(fmt)} to {dates[-1].strftime(fmt)}, {len(dates)} files')
+        if len(files) >= group_min_size:
+            start = dates[0].strftime(fmt)
+            end = dates[-1].strftime(fmt)
+            if start == end:
+                folder_name = f'{start}{suffix}'
+            else:
+                folder_name =  f'{start} to {end}{suffix}'
+            res_parent = base_path / dates[0].strftime('%Y') / folder_name
+            LOGGER.info(f'group: {folder_name}, {len(files)} files')
+        else:
+            res_parent = base_path
+
+        if not res_parent.exists():
+            res_parent.mkdir(parents=True)
+
+        for file in files:
+            res = res_parent / file.name
+            LOGGER.info(f'move start: "{file}", "{res}"')
+            try:
+                shutil.move(file, res)
+            except:
+                LOGGER.error(f'move fail "{file}", "{res}"')
+                continue
+            else:
+                LOGGER.info(f'move end: "{file}", "{res}"')

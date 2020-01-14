@@ -23,3 +23,11 @@ def get_jpg_size(path):
         width = (w[0] << 8) + w[1]
 
         return width, height
+
+
+def remove_empty_dirs(base):
+    for dir in base.glob('**\*'):
+        if dir.is_dir():
+            contents = [p for p in dir.iterdir()]
+            if len(contents) == 0:
+                dir.rmdir()
