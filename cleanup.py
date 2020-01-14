@@ -9,7 +9,7 @@ import utils
 LOGGER = logging.getLogger(__name__)
 
 
-def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
+def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, test=False, **kwargs):
     if isinstance(source, GeneratorType):
         file_generator = source
     else:
@@ -21,13 +21,15 @@ def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, **kwargs):
         try:
             # create parent directory for new file if it doesn't exist
             if not dest.parents[0].exists():
-                dest.parents[0].mkdir(parents=True)
+                if not test:
+                    dest.parents[0].mkdir(parents=True)
                 LOGGER.debug(f'mkdir: "{dest.parents[0]}"')
 
             # double-check that we're not about to overwrite anything
             if not dest.exists():
                 LOGGER.info(f'start copy: "{original}", "{dest}"')
-                shutil.copy2(original, dest)
+                if not test:
+                    shutil.copy2(original, dest)
                 LOGGER.warning(f'end copy: "{original}", "{dest}"')
         except Exception as e:
             LOGGER.exception(repr(e))
