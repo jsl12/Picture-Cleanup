@@ -26,8 +26,11 @@ def get_jpg_size(path):
 
 
 def remove_empty_dirs(base):
+    to_remove = []
     for dir in base.glob('**\*'):
         if dir.is_dir():
             contents = [p for p in dir.iterdir()]
             if len(contents) == 0:
-                dir.rmdir()
+                to_remove.append(dir)
+    for d in to_remove:
+        d.rmdir()

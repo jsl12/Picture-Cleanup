@@ -38,7 +38,7 @@ def get_groups(base_path, time_threshold=3, **kwargs):
     file_groups = np.split(files, cuts)
     date_groups = np.split(dates, cuts)
 
-    return zip(file_groups, date_groups)
+    yield from zip(file_groups, date_groups)
 
 def sort_group(base_path, group_min_size=5, suffix=' - (desc)', **kwargs):
     fmt = '%m-%d'
@@ -53,19 +53,20 @@ def sort_group(base_path, group_min_size=5, suffix=' - (desc)', **kwargs):
             res_parent = base_path / dates[0].strftime('%Y') / folder_name
             LOGGER.info(f'group: {folder_name}, {len(files)} files')
         else:
-            res_parent = base_path
+            res_parent = base_path / dates[0].strftime('%Y') / dates[0].strftime('%m - %B')
 
         if not res_parent.exists():
             res_parent.mkdir(parents=True)
 
         for file in files:
             res = res_parent / file.name
-            LOGGER.info(f'move start: "{file}", "{res}"')
-            try:
-                shutil.move(file, res)
-            except:
-                LOGGER.error(f'move fail "{file}", "{res}"')
-                continue
-            else:
-                LOGGER.info(f'move end: "{file}", "{res}"')
+            if file != res:
+                LOGGER.info(f'move start: "{file}", "{res}"')
+                try:
+                    shutil.move(file, res)
+                except:
+                    LOGGER.error(f'move fail "{file}", "{res}"')
+                    continue
+                else:
+                    LOGGER.info(f'move end: "{file}", "{res}"')
     utils.remove_empty_dirs(base_path)
