@@ -102,8 +102,13 @@ def check_duplicates(meta1, meta2, type=None, keywords=None):
     elif type == 'exif':
         to_check = EXIF_ATTRIBUTES
 
+    # add any additional keywords
     if isinstance(keywords, list):
         to_check.extend(keywords)
+
+    # always check the size if available
+    if 'st_size' in meta1 and 'st_size' in meta2:
+        to_check.append('st_size')
 
     for att in to_check:
         try:
@@ -113,6 +118,7 @@ def check_duplicates(meta1, meta2, type=None, keywords=None):
         except KeyError:
             raise MissingComparisonField(att)
     else:
+        LOGGER.info(f'duplicates based on: {", ".join(to_check)}')
         return True
 
 
