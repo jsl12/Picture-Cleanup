@@ -41,24 +41,6 @@ def hash(input):
     return m.hexdigest()
 
 
-def paths_from_dir_txt(path, ext='jpg'):
-    path = Path(path)
-    for file in path.glob('*.txt'):
-        with file.open('r') as f:
-            line = True
-            while line:
-                line = f.readline()
-                try:
-                    p = Path(line.strip())
-                except Exception as e:
-                    continue
-                else:
-                    if ext is not None and p.suffix == f'.{ext}':
-                        yield p
-                    elif ext is None and p.suffix != '':
-                        yield p
-
-
 date_regex = re.compile('(?P<year>(19|20)\d{2})(?P<delim>[- _\\\\]?)(?P<month>(0[1-9]|1[0-2]))')
 def scan_date(path):
     m = date_regex.search(str(path))

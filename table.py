@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+import check
 import log
 import utils
 
@@ -37,7 +38,13 @@ def csv_copied(logfile, csv_path):
 
 
 def df_from_dir_texts(source):
-    return stat_df(utils.paths_from_dir_txt(source, ext=None))
+    files = [f for f in check.paths_from_dir_txt(source)]
+    return pd.DataFrame(
+        data={
+            'path': files,
+            'filename': [f.name for f in files]
+        }
+    )
 
 
 def stat_df(source, hash_keys=None, parse_pathdate=True):

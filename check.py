@@ -43,7 +43,7 @@ def check_date_parse(source, logfile=None, glob_str=None):
     if isinstance(glob_str, str):
         source = source.glob(glob_str)
     else:
-        source = utils.paths_from_dir_txt(source)
+        source = paths_from_dir_txt(source)
 
     start = time.time()
     total, parsed = 0, 0
@@ -67,14 +67,20 @@ def check_date_parse(source, logfile=None, glob_str=None):
     LOGGER.info(f'parse rate: {parse_rate :.2f}%')
     return parse_rate, parse_time
 
-def parse_rate(logfile):
-    parsed = 0
-    failed = 0
-    total = 0
-    for line in log.line_gen(logfile):
-        total += 1
-        if 'parse' in line:
-            parsed += 1
-        elif 'fail' in line:
-            failed += 1
-    return (parsed / total)
+
+def paths_from_dir_txt(path, ext='jpg'):
+    path = Path(path)
+    for file in path.glob('*.txt'):
+        with file.open('r') as f:
+            line = True
+            while line:
+                line = f.readline()
+                try:
+                    p = Path(line.strip())
+                except Exception as e:
+                    continue
+                else:
+                    if ext is not None and p.suffix == f'.{ext}':
+                        yield p
+                    elif ext is None and p.suffix != '':
+                        yield p
