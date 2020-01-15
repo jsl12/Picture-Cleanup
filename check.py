@@ -65,7 +65,7 @@ def check_date_parse(source, logfile=None, glob_str=None):
     parse_time = end - start
     parse_rate = (parsed / total) * 100
     LOGGER.info(f'parse time: {parse_time :.2f}s')
-    LOGGER.info(f'parse rate: {parse_rate :.2f}s')
+    LOGGER.info(f'parse rate: {parse_rate :.2f}%')
     return parse_rate, parse_time
 
 def parse_rate(logfile):
