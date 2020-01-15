@@ -70,12 +70,13 @@ def match_date_patterns(path):
                 LOGGER.error(f'bad date: {path.name} does not match {date_format}')
                 continue
             else:
+                LOGGER.debug(f'parsed date: {date_format}, "{path}"')
                 return file_date
 
 
 PATTERNS = [
     (re.compile('((19|20)\d{6}_\d{6})'), '%Y%m%d_%H%M%S'),
     (re.compile('((19|20)\d{12})'), '%Y%m%d%H%M%S'),
-    (re.compile('((19|20)\d{2}-\d{2}-\d{2}_\d{2}-\d{2})'), '%Y-%m-%d_%H-%M'),
-    (re.compile('((19|20)\d{2}-\d{2}-\d{2}_\d{2}\.\d{2}\.\d{2})'), '%Y-%m-%d_%H.%M.%S')
+    (re.compile('((19|20)\d{2}-\d{2}-\d{2})_\d{2}-\d{2}'), '%Y-%m-%d'),
+    (re.compile('((19|20)\d{2}-\d{2}-\d{2})_\d{2}\.\d{2}\.\d{2}'), '%Y-%m-%d')
 ]
