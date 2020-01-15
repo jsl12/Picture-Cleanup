@@ -5,7 +5,6 @@ from pathlib import Path
 import pandas as pd
 
 import log
-import pic_collections as pc
 import utils
 
 LOGGER = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ def stat_df(source, hash_keys=None, parse_pathdate=True):
 
     LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
     if parse_pathdate:
-        df['pathdate'] = df['path'].apply(pc.parse_date_from_path)
+        df['pathdate'] = df['path'].apply(utils.scan_date)
 
     return df
 

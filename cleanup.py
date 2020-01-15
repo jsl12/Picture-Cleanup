@@ -4,7 +4,6 @@ from pathlib import Path
 from types import GeneratorType
 
 import metadata
-import pic_collections as pc
 import utils
 
 LOGGER = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
         filesize = file.stat().st_size
         if filesize > (min_size or 50000):
             # parse the date from the file somehow
-            pathdate = pc.parse_date_from_path(file)
+            pathdate = utils.scan_date(file)
             if pathdate is not None:
                 # generate the path within the target, needs to be the same as LightRoom
                 res = target_parent / pathdate.strftime('%Y') / pathdate.strftime('%m %B') / file.name

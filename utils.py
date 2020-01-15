@@ -59,29 +59,12 @@ def paths_from_dir_txt(path, ext='jpg'):
                         yield p
 
 
-def match_date_patterns(input):
-    for regex, date_format in PATTERNS:
-        file_date = process_date_pattern(input, regex, date_format)
-        if file_date is not None:
-            break
-    return file_date
-
-
-def process_date_pattern(input, regex, date_format):
-    m = regex.search(str(input))
+date_regex = re.compile('(?P<year>(19|20)\d{2})(?P<delim>[- _\\\\]?)(?P<month>(0[1-9]|1[0-2]))')
+def scan_date(path):
+    m = date_regex.search(str(path))
     if m is not None:
-        date_str = m.group(1)
-        try:
-            file_date = datetime.strptime(date_str, date_format)
-        except ValueError as e:
-            LOGGER.error(f'bad date: {date_str} does not match {date_format}')
-        else:
-            LOGGER.debug(f'parsed date: {date_format}, "{input}"')
-            return file_date
-
-PATTERNS = [
-    (re.compile('((19|20)\d{6}_\d{6})'), '%Y%m%d_%H%M%S'),
-    (re.compile('((19|20)\d{12})'), '%Y%m%d%H%M%S'),
-    (re.compile('((19|20)\d{2}-\d{2}-\d{2})'), '%Y-%m-%d'),
-    (re.compile('((19|20)\d{2}_\d{2}_\d{2})'), '%Y_%m_%d')
-]
+        return datetime(
+            year=int(m.group('year')),
+            month=int(m.group('month')),
+            day=1
+        )

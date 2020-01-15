@@ -1,11 +1,10 @@
 import logging
 import shutil
+import time
 from pathlib import Path
 
 import log
-import pic_collections as pc
 import utils
-import time
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ def check_date_parse(source, logfile=None, glob_str=None):
     for path in source:
         total += 1
         try:
-            pathdate = pc.parse_date_from_path(path)
+            pathdate = utils.scan_date(path)
         except Exception as e:
             LOGGER.exception(repr(e))
             continue
