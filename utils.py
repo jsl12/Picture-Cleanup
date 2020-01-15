@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from pathlib import Path
 
@@ -34,3 +35,14 @@ def remove_empty_dirs(base):
                 to_remove.append(dir)
     for d in to_remove:
         d.rmdir()
+
+def hash(input):
+    m = hashlib.md5()
+    if not isinstance(input, list):
+        input = [input]
+    for info in input:
+        if isinstance(info, str):
+            m.update(bytes(info, encoding='UTF-8', errors='strict'))
+        else:
+            m.update(bytes(info))
+    return m.hexdigest()

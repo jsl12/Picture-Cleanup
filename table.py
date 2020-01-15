@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-
+import utils
 import pandas as pd
 
 import log
@@ -33,23 +33,23 @@ def csv_copied(logfile, csv_path):
     return df
 
 
-def df_from_dir(source):
-    files = [f for f in pic_collections.file_gen(source, ext=None)]
-    return pd.DataFrame(data={'path': files})
+def df_from_dir_texts(source):
+    return stat_df(pic_collections.file_gen(source, ext=None))
 
 
-def df_from_glob(source):
-    return pd.DataFrame(data={'path': [f for f in source]})
-
-
-def add_stats(df):
-    stat_df = pd.DataFrame(df['path'].apply(lambda p: extract_stats(os.stat(p))).to_list())
-    return pd.concat([df, stat_df], axis=1)
+def stat_df(source, hash_keys=None):
+    files = [f for f in source]
+    df = pd.concat([
+        pd.DataFrame(data={'path': files, 'filename': [f.name for f in files]}),
+        pd.DataFrame([extract_stats(os.stat(f)) for f in files])
+    ], axis=1)
+    if hash_keys is not None:
+        df.index = df.apply(lambda row: utils.hash([row[key] for key in hash_keys]), axis=1)
+    return df
 
 
 def extract_stats(stat_obj):
-    res = {key: getattr(stat_obj, key) for key in dir(stat_obj) if key[:3] == 'st_'}
-    return res
+    return {key: getattr(stat_obj, key) for key in dir(stat_obj) if key[:3] == 'st_'}
 
 
 if __name__ == '__main__':
