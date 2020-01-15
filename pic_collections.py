@@ -34,7 +34,8 @@ def parse_date_from_path(path):
 
 PATTERNS = [
     (re.compile('((19|20)\d{6}_\d{6})'), '%Y%m%d_%H%M%S'),
-    (re.compile('((19|20)\d{12})'), '%Y%m%d%H%M%S')
+    (re.compile('((19|20)\d{12})'), '%Y%m%d%H%M%S'),
+    (re.compile('(19|20)\d{2}-\d{2}-\d{2}_\d{2}-\d{2}'), '%Y-%m-%d_%H-%M')
 ]
 
 
