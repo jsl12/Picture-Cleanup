@@ -1,9 +1,12 @@
+import logging
 import shutil
 from pathlib import Path
 
 import log
+import pic_collections as pc
 import utils
 
+LOGGER = logging.getLogger(__name__)
 
 def check_exif(logfile):
     for line, path in log.errors(logfile):
@@ -31,3 +34,37 @@ def move_to_purgatory(logfile, purgatory_path):
     files = set([path for line, path in log.errors(logfile)])
     for f in files:
         shutil.copy2(f, Path(purgatory_path) / f.name)
+
+
+def check_date_parse(source, logfile=None, glob_str=None):
+    if logfile is not None:
+        log.configure(logfile, stream_level=logging.INFO)
+
+    if isinstance(glob_str, str):
+        source = source.glob(glob_str)
+    else:
+        source = utils.paths_from_dir_txt(source)
+
+    for path in source:
+        try:
+            pathdate = pc.parse_date_from_path(path)
+        except Exception as e:
+            LOGGER.exception(repr(e))
+            continue
+        else:
+            if pathdate is not None:
+                LOGGER.info(f'parsed date: "{path}"')
+            else:
+                LOGGER.info(f'date parse fail: "{path}"')
+
+def parse_rate(logfile):
+    parsed = 0
+    failed = 0
+    total = 0
+    for line in log.line_gen(logfile):
+        total += 1
+        if 'parse' in line:
+            parsed += 1
+        elif 'fail' in line:
+            failed += 1
+    return (parsed / total)
