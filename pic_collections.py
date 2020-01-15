@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from pathlib import Path
 
 from utils import match_date_patterns
 
@@ -7,6 +8,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def parse_date_from_path(path):
+    path = Path(path)
     for key, handler in HANDLERS.items():
         if key in str(path.resolve()):
             handler = globals()[handler] if isinstance(handler, str) else handler

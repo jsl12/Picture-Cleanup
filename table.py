@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 import log
+import pic_collections as pc
 import utils
 
 LOGGER = logging.getLogger(__name__)
@@ -40,30 +41,40 @@ def df_from_dir_texts(source):
     return stat_df(utils.paths_from_dir_txt(source, ext=None))
 
 
-def stat_df(source, hash_keys=None, process_dates=True):
+def stat_df(source, hash_keys=None, parse_pathdate=True):
+    LOGGER.info(f'constructing df from: "{source}"')
     files = [f for f in source]
     df = pd.concat([
         pd.DataFrame(data={'path': files, 'filename': [f.name for f in files]}),
         pd.DataFrame([extract_stats(f) for f in files])
     ], axis=1)
 
+    LOGGER.info(f'hashing indices: {df.shape[0]} files')
     hash_keys = hash_keys or ['filename', 'st_size']
-    df.index = df.apply(lambda row: utils.hash([row[key] for key in hash_keys]), axis=1)
+    df.index = pd.Index(
+        data=df.apply(lambda row: utils.hash([row[key] for key in hash_keys]), axis=1),
+        name='hash'
+    )
 
-    if process_dates:
-        for col in df:
-            if ('time' in col) and ('_ns' not in col):
-                df[col] = pd.to_datetime(df[col].apply(datetime.fromtimestamp))
+    LOGGER.info(f'converting timestamps: {df.shape[0]} files')
+    for col in df:
+        if ('time' in col) and ('_ns' not in col):
+            df[col] = pd.to_datetime(df[col].apply(datetime.fromtimestamp))
+
+    LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
+    if parse_pathdate:
+        df['pathdate'] = df['path'].apply(pc.parse_date_from_path)
+
     return df
 
 
 def extract_stats(path: Path):
-    stat_obj = Path(path).stat()
     LOGGER.debug(f'getting os stats: "{path}"')
+    stat_obj = Path(path).stat()
     return {key: getattr(stat_obj, key) for key in dir(stat_obj) if key[:3] == 'st_'}
 
 
 if __name__ == '__main__':
-    gen = Path('temp').glob('**\*.jpg')
-    df = stat_df(gen)
-    print(df.head())
+    logging.basicConfig(level=logging.INFO)
+    df = stat_df(Path('temp').glob('**\*.jpg'))
+    print(df[['path', 'pathdate']])
