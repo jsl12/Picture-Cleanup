@@ -15,15 +15,12 @@ def files_and_dates(base_path, **kwargs):
     return list(files), list(dates)
 
 
-def file_date_gen(base_path, glob='**\*.jpg', date_format='%Y-%m-%d_%H.%M.%S'):
+def file_date_gen(base_path, glob='**\*.jpg'):
     for file in Path(base_path).glob(glob):
         try:
-            yield file, datetime.strptime(file.stem, date_format)
-        except ValueError as e:
-            UNCONVERTED_STR = 'unconverted data remains: '
-            if UNCONVERTED_STR in str(e):
-                uncoverted_portion = str(e).split(UNCONVERTED_STR)[1].strip()
-                yield file, datetime.strptime(file.stem[:-len(uncoverted_portion)], date_format)
+            yield file, utils.scan_date(file)
+        except Exception as e:
+            pass
 
 
 def get_groups(base_path, time_threshold=3, **kwargs):
@@ -40,7 +37,7 @@ def get_groups(base_path, time_threshold=3, **kwargs):
 
     yield from zip(file_groups, date_groups)
 
-def sort_group(base_path, group_min_size=5, suffix=' - (desc)', **kwargs):
+def sort_group(base_path, group_min_size=5, suffix=' (desc)', **kwargs):
     fmt = '%m-%d'
     for files, dates in get_groups(base_path, **kwargs):
         if len(files) >= group_min_size:

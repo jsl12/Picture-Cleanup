@@ -9,7 +9,7 @@ import utils
 LOGGER = logging.getLogger(__name__)
 
 
-def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
+def simple_copy(source, target_parent, ext=None, min_size=None, test=False, exclude_folders=None):
     # handles several kinds of source types
     glob_str = f'**\*.{"*" if ext is None else ext}'
     if isinstance(source, str):
@@ -18,6 +18,13 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
         source = source.glob(glob_str)
 
     for file in source:
+        if exclude_folders is not None:
+            if all([isinstance(exc, str) for exc in exclude_folders]):
+                if any([exc in str(file) for exc in exclude_folders]):
+                    continue
+            else:
+                raise ValueError(f'invalid exclude_folders: {exclude_folders}')
+
         # check the min file size
         filesize = file.stat().st_size
         if filesize > (min_size or 50000):
@@ -34,6 +41,8 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
                     try:
                         # allows a test argument to be passed in order to only log
                         if not test:
+                            if not res.parents[0].exists():
+                                res.parents[0].mkdir(parents=True)
                             shutil.copy2(file, res)
                     except Exception as e:
                         # if anything goes wrong during the copy
