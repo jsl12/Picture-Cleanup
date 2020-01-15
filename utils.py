@@ -55,6 +55,8 @@ def scan_date(path):
             year = int(res['year'])
             month = int(res['month'])
             day = int(res['day'] or 1)
+            if day == 0:
+                day += 1
             if ((1950 <= year <= 2050) and
                 (1 <= month <= 12) and
                 (1 <= day <= 31)):
