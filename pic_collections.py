@@ -18,29 +18,29 @@ def parse_date_from_path(path):
 
 
 def parse_google_photo(path):
-    def style(path):
-        rel_path = Path(str(path).split('Photos')[1])
+    def style(parts):
         return datetime(
-            year=int(rel_path.parts[1]),
-            month=int(rel_path.parts[2]),
+            year=int(parts[0]),
+            month=int(parts[1]),
             day=1
         )
 
-    def style2(path):
+    def style2(parts):
         return datetime(
-            year=int(path.parents[1].name),
-            month=int(path.parents[0].name),
+            year=int(parts[-3]),
+            month=int(parts[-2]),
             day=1
         )
 
-    def style3(path):
-        return match_date_patterns(path.name)
+    def style3(parts):
+        return match_date_patterns(parts[-1])
 
     log_prefix = 'google photo: '
     for path_style in [style, style2, style3]:
         try:
-            file_date = path_style(path)
-        except ValueError as e:
+            parts = str(path).split('Google Photos\\')[1].split('\\')
+            file_date = path_style(parts)
+        except (ValueError, IndexError) as e:
             continue
         except Exception as e:
             LOGGER.exception(repr(e))
