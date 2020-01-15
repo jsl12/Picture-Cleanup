@@ -43,6 +43,8 @@ def stat_df(source, hash_keys=None):
         pd.DataFrame(data={'path': files, 'filename': [f.name for f in files]}),
         pd.DataFrame([extract_stats(os.stat(f)) for f in files])
     ], axis=1)
+
+    hash_keys = hash_keys or ['filename', 'st_size']
     if hash_keys is not None:
         df.index = df.apply(lambda row: utils.hash([row[key] for key in hash_keys]), axis=1)
     return df
