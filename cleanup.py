@@ -25,7 +25,7 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
             # parse the date from the file somehow
             pathdate = pc.parse_date_from_path(file)
             if pathdate is not None:
-                # generate the path within the target
+                # generate the path within the target, needs to be the same as LightRoom
                 res = target_parent / pathdate.strftime('%Y') / pathdate.strftime('%m %B') / file.name
                 # check for duplicates
                 if res.exists() and (res.stat().st_size == file.stat().st_size):
@@ -42,7 +42,7 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
                         continue # skip to the next file
                     else:
                         # if the copy succeeded
-                        LOGGER.info(f'new file: "{res.relative_to(target_parent)}", "{file}"')
+                        LOGGER.info(f'new file: "{res.relative_to(target_parent)}", "{file.resolve()}"')
             else:
                 LOGGER.error(f'datetime fail: "{file}"')
         else:

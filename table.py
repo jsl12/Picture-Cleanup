@@ -34,7 +34,7 @@ def csv_copied(logfile, csv_path):
 
 
 def df_from_dir_texts(source):
-    return stat_df(utils.paths_from_dir(source, ext=None))
+    return stat_df(utils.paths_from_dir_txt(source, ext=None))
 
 
 def stat_df(source, hash_keys=None):

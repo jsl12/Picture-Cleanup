@@ -20,9 +20,16 @@ def configure(file=None, append=False, stream_level=logging.WARNING, file_level=
     logging.basicConfig(level=logging.DEBUG, handlers=handlers)
 
 
+def keyword_paths(logfile, keyword):
+    yield from (tuple(get_paths(line)) for line in filter(line_gen(logfile), keyword))
+
+
+def new_files(logfile):
+    yield from (paths[1] for paths in keyword_paths(logfile, 'new file'))
+
+
 def copied_files(logfile):
-    for line in filter(line_gen(logfile), 'end copy'):
-        yield tuple(get_paths(line))
+    yield from keyword_paths(logfile, 'end copy')
 
 
 def errors(logfile):

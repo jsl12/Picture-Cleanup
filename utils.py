@@ -4,9 +4,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from pic_collections import LOGGER
 
 LOGGER = logging.getLogger(__name__)
+
 
 def get_unique_filename(path: Path) -> Path:
     if path.exists():
@@ -41,7 +41,7 @@ def hash(input):
     return m.hexdigest()
 
 
-def paths_from_dir(path, ext='jpg'):
+def paths_from_dir_txt(path, ext='jpg'):
     path = Path(path)
     for file in path.glob('*.txt'):
         with file.open('r') as f:
