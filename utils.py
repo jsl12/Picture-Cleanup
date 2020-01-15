@@ -40,13 +40,28 @@ def hash(input):
             m.update(bytes(info))
     return m.hexdigest()
 
-
-date_regex = re.compile('(?P<year>(19|20)\d{2})(?P<delim>[- _\\\\]?)(?P<month>(0[1-9]|1[0-2]))')
+date_regex = re.compile(
+    '(?P<year>(19|20)\d{2})'    # year
+    '[- _\\\\]?'                # delimter between year and month, could be \ between paths
+    '(?P<month>[01]\d{1})'      # month
+    '([- _]?'                   # delimter between month and day
+    '(?P<day>\d{2}))?'          # day (optional)
+)
 def scan_date(path):
     m = date_regex.search(str(path))
-    if m is not None:
-        return datetime(
-            year=int(m.group('year')),
-            month=int(m.group('month')),
-            day=1
-        )
+    try:
+        if m is not None:
+            res = m.groupdict()
+            year = int(res['year'])
+            month = int(res['month'])
+            day = int(res['day'] or 1)
+            if ((1950 <= year <= 2050) and
+                (1 <= month <= 12) and
+                (1 <= day <= 31)):
+                return datetime(
+                    year=year,
+                    month=month,
+                    day=day
+                )
+    except Exception as e:
+        pass

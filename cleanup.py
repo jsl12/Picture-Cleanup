@@ -25,7 +25,7 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
             pathdate = utils.scan_date(file)
             if pathdate is not None:
                 # generate the path within the target, needs to be the same as LightRoom
-                res = target_parent / pathdate.strftime('%Y') / pathdate.strftime('%m %B') / file.name
+                res = target_parent / pathdate.strftime('%Y') / pathdate.strftime('%Y-%m-%d') / file.name
                 # check for duplicates
                 if res.exists() and (res.stat().st_size == file.stat().st_size):
                     LOGGER.info(f'duplicates: "{file}", "{res}"')
