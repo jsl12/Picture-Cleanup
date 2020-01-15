@@ -5,6 +5,7 @@ from pathlib import Path
 import log
 import pic_collections as pc
 import utils
+import time
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ def check_date_parse(source, logfile=None, glob_str=None):
     else:
         source = utils.paths_from_dir_txt(source)
 
+    start = time.time()
     for path in source:
         try:
             pathdate = pc.parse_date_from_path(path)
@@ -56,6 +58,10 @@ def check_date_parse(source, logfile=None, glob_str=None):
                 LOGGER.info(f'parsed date: "{path}"')
             else:
                 LOGGER.info(f'date parse fail: "{path}"')
+    end = time.time()
+    parse_time = end - start
+    LOGGER.info(f'parse time: {parse_time :.2f}s')
+    return parse_time
 
 def parse_rate(logfile):
     parsed = 0
