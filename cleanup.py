@@ -4,9 +4,50 @@ from pathlib import Path
 from types import GeneratorType
 
 import metadata
+import pic_collections as pc
 import utils
 
 LOGGER = logging.getLogger(__name__)
+
+
+def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
+    # handles several kinds of source types
+    glob_str = f'**\*.{"*" if ext is None else ext}'
+    if isinstance(source, str):
+        source = Path(source).glob(glob_str)
+    elif isinstance(source, Path):
+        source = source.glob(glob_str)
+
+    for file in source:
+        # check the min file size
+        filesize = file.stat().st_size
+        if filesize > (min_size or 50000):
+            # parse the date from the file somehow
+            pathdate = pc.parse_date_from_path(file)
+            if pathdate is not None:
+                # generate the path within the target
+                res = target_parent / pathdate.strftime('%Y') / pathdate.strftime('%m %B') / file.name
+                # check for duplicates
+                if res.exists() and (res.stat().st_size == file.stat().st_size):
+                    LOGGER.info(f'duplicates: "{file}", "{res}"')
+                    continue # skip to the next file
+                else:
+                    try:
+                        # allows a test argument to be passed in order to only log
+                        if not test:
+                            shutil.copy2(file, res)
+                    except Exception as e:
+                        # if anything goes wrong during the copy
+                        LOGGER.exception(repr(e))
+                        continue # skip to the next file
+                    else:
+                        # if the copy succeeded
+                        LOGGER.info(f'new file: "{res}"')
+            else:
+                LOGGER.error(f'datetime fail: "{file}"')
+        else:
+            LOGGER.debug(f'below minsize: "{file}"')
+            continue # skip to the next file
 
 
 def copy_and_sort(source, dest_parent, ext='jpg', recursive=True, test=False, preserve_filenames=True, **kwargs):
