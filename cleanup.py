@@ -25,6 +25,8 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False, excl
             else:
                 raise ValueError(f'invalid exclude_folders: {exclude_folders}')
 
+        file = file.resolve()
+
         # check the min file size
         filesize = file.stat().st_size
         if filesize > (min_size or 50000):
@@ -33,9 +35,13 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False, excl
             if pathdate is not None:
                 # generate the path within the target, needs to be the same as LightRoom
                 res = target_parent / pathdate.strftime('%Y') / pathdate.strftime('%Y-%m-%d') / file.name
+                res_str = str(res.relative_to(target_parent))
                 # check for duplicates
-                if res.exists() and (res.stat().st_size == file.stat().st_size):
-                    LOGGER.info(f'duplicates: "{file}", "{res}"')
+                if res.exists():
+                    if (res.stat().st_size == file.stat().st_size):
+                        LOGGER.info(f'duplicates: "{file}", "{res_str}"')
+                    else:
+                        LOGGER.info(f'file already exists: "{file}", "{res_str}"')
                     continue # skip to the next file
                 else:
                     try:
@@ -50,7 +56,7 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False, excl
                         continue # skip to the next file
                     else:
                         # if the copy succeeded
-                        LOGGER.info(f'new file: "{res.relative_to(target_parent)}", "{file.resolve()}"')
+                        LOGGER.info(f'new file: "{res_str}", "{file}"')
             else:
                 LOGGER.error(f'datetime fail: "{file}"')
         else:

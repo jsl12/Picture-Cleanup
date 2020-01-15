@@ -5,7 +5,7 @@ import log
 
 LOGGER = logging.getLogger(__name__)
 
-def pull_from_phone(host, port, local_path, phone_path=None, ext='jpg',user='android', passwd='android'):
+def pull_from_phone(host, port, local_path, phone_path=None, ext='jpg', user='android', passwd='android'):
     ftp = ftplib.FTP()
     ftp.connect(host, port)
     try:
