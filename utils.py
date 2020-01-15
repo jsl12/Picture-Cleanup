@@ -1,6 +1,10 @@
 import hashlib
 import logging
+import re
+from datetime import datetime
 from pathlib import Path
+
+from pic_collections import LOGGER
 
 LOGGER = logging.getLogger(__name__)
 
@@ -14,18 +18,6 @@ def get_unique_filename(path: Path) -> Path:
         return path
 
 
-def get_jpg_size(path):
-    with open(path, 'rb') as file:
-        file.seek(163)
-        h = file.read(2)
-        height = (h[0] << 8) + h[1]
-
-        w = file.read(2)
-        width = (w[0] << 8) + w[1]
-
-        return width, height
-
-
 def remove_empty_dirs(base):
     to_remove = []
     for dir in base.glob('**\*'):
@@ -35,6 +27,7 @@ def remove_empty_dirs(base):
                 to_remove.append(dir)
     for d in to_remove:
         d.rmdir()
+
 
 def hash(input):
     m = hashlib.md5()
@@ -46,3 +39,43 @@ def hash(input):
         else:
             m.update(bytes(info))
     return m.hexdigest()
+
+
+def paths_from_dir(path, ext='jpg'):
+    path = Path(path)
+    for file in path.glob('*.txt'):
+        with file.open('r') as f:
+            line = True
+            while line:
+                line = f.readline()
+                try:
+                    p = Path(line.strip())
+                except Exception as e:
+                    continue
+                else:
+                    if ext is not None and p.suffix == f'.{ext}':
+                        yield p
+                    elif ext is None and p.suffix != '':
+                        yield p
+
+
+def match_date_patterns(path):
+    for regex, date_format in PATTERNS:
+        m = regex.search(str(path.name))
+        if m is not None:
+            date_str = m.group(1)
+            try:
+                file_date = datetime.strptime(date_str, date_format)
+            except ValueError as e:
+                LOGGER.error(f'bad date: {path.name} does not match {date_format}')
+                continue
+            else:
+                return file_date
+
+
+PATTERNS = [
+    (re.compile('((19|20)\d{6}_\d{6})'), '%Y%m%d_%H%M%S'),
+    (re.compile('((19|20)\d{12})'), '%Y%m%d%H%M%S'),
+    (re.compile('((19|20)\d{2}-\d{2}-\d{2}_\d{2}-\d{2})'), '%Y-%m-%d_%H-%M'),
+    (re.compile('((19|20)\d{2}-\d{2}-\d{2}_\d{2}\.\d{2}\.\d{2})'), '%Y-%m-%d_%H.%M.%S')
+]

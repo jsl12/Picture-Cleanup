@@ -42,7 +42,7 @@ def simple_copy(source, target_parent, ext=None, min_size=None, test=False):
                         continue # skip to the next file
                     else:
                         # if the copy succeeded
-                        LOGGER.info(f'new file: "{res}"')
+                        LOGGER.info(f'new file: "{res.relative_to(target_parent)}", "{file}"')
             else:
                 LOGGER.error(f'datetime fail: "{file}"')
         else:

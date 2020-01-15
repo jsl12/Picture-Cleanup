@@ -4,7 +4,6 @@ from pathlib import Path
 import pandas as pd
 
 import log
-import pic_collections
 import utils
 
 
@@ -35,7 +34,7 @@ def csv_copied(logfile, csv_path):
 
 
 def df_from_dir_texts(source):
-    return stat_df(pic_collections.file_gen(source, ext=None))
+    return stat_df(utils.paths_from_dir(source, ext=None))
 
 
 def stat_df(source, hash_keys=None):
@@ -56,4 +55,8 @@ def extract_stats(stat_obj):
 
 
 if __name__ == '__main__':
-    df = csv_copied('jsl_cleanup.log', 'copied files.csv')
+    # df = df_from_dir('PhotoCollections')
+    gen = Path('PhotoCollections').glob('*')
+    gen = Path('temp').glob('**\*.jpg')
+    df = stat_df(gen)
+    print(df.head())
