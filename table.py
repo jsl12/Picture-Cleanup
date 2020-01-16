@@ -113,6 +113,10 @@ def hash_index(df, hash_keys=None):
     return df
 
 
+def handle_duplicates(df: pd.DataFrame, func, keys=None):
+    return df.groupby(keys or ['filename', 'st_size']).apply(func)
+
+
 def duplicate_sets(df: pd.DataFrame, keys=None, min=1):
     yield from (
         dup_set                                         # dup_set is a DataFrame
