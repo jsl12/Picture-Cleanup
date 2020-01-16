@@ -60,13 +60,14 @@ def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_fold
         assert all([isinstance(e, str) for e in ext])
         LOGGER.info(f'checking file extensions: {ext}')
         ext_mask = pd.DataFrame(data={e: df['path'].apply(lambda p: p.suffix) == e for e in ext}).any(axis=1)
-        df = df[ext_mask]
 
     if exclude_folders is not None:
         assert all([isinstance(folder, str) for folder in exclude_folders])
         LOGGER.info(f'folder exclusions: {exclude_folders}')
         exc_mask = pd.DataFrame(data={folder: df['path'].apply(lambda p: folder in str(p)) for folder in exclude_folders}).any(axis=1)
-        df = df[~exc_mask]
+
+    master_mask = (ext_mask | ~exc_mask)
+    df, rejects = df[master_mask], df[~master_mask]
 
     LOGGER.info(f'converting timestamps: {df.shape[0]} files')
     for col in df:
@@ -83,8 +84,7 @@ def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_fold
         data=df.apply(lambda row: utils.hash([row[key] for key in hash_keys]), axis=1),
         name='hash'
     )
-
-    return df
+    return df, rejects
 
 
 def extract_stats(path: Path):
