@@ -113,17 +113,17 @@ def hash_index(df, hash_keys=None):
     return df
 
 
-def duplicate_sets(df: pd.DataFrame, keys=None):
-    keys = keys or ['filename', 'st_size']
+def duplicate_sets(df: pd.DataFrame, keys=None, min=1):
     yield from (
-        df[(df[keys] == row[keys]).all(axis=1)]             # select from df, the rows where all the specified columns match the corresponding values in the row
-        for idx, row in
-        df[df.duplicated(keys, keep='first')].iterrows()    # iterate through the rows of duplicates in df
+        dup_set                                         # dup_set is a DataFrame
+        for (filename, size), dup_set in                # with the groupby object, the iterations will also have the 2 values it is grouping by
+        df.groupby(keys or ['filename', 'st_size'])     # group all the sets with unique combinations of values specified by keys
+        if dup_set.shape[0] > min                       # only if the set contains more than 1 item
     )
 
 
 def dupicates_to_file(df: pd.DataFrame, file, keys=None):
-    return utils.dfs_to_file([df for idx, df in df.groupby(keys or ['filename', 'st_size']) if df.shape[0] > 1], file)
+    return utils.dfs_to_file(duplicate_sets(df, keys), file)
 
 
 def res_df(df, target_parent, keep=False, date_col='pathdate'):
