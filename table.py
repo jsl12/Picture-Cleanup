@@ -47,7 +47,7 @@ def df_from_dir_texts(source):
     )
 
 
-def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_folders=None):
+def stat_df(source, hash=False, hash_keys=None, parse_pathdate=True, ext='all', exclude_folders=None):
     LOGGER.info(f'constructing df from: "{source}"')
     # files = [f for f in source.glob('**\*.*') if (ext is not None) and any([f.suffix == folder for folder in ext])]
     files = [f for f in source.glob('**\*.*')]
@@ -78,12 +78,13 @@ def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_fold
         LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
         df['pathdate'] = df['path'].apply(lambda p: utils.scan_date(p) or pd.NaT)
 
-    LOGGER.info(f'hashing indices: {df.shape[0]} files')
-    hash_keys = hash_keys or ['filename', 'st_size']
-    df.index = pd.Index(
-        data=df.apply(lambda row: utils.hash([row[key] for key in hash_keys]), axis=1),
-        name='hash'
-    )
+    if hash:
+        LOGGER.info(f'hashing indices: {df.shape[0]} files')
+        hash_keys = hash_keys or ['filename', 'st_size']
+        df.index = pd.Index(
+            data=df.apply(lambda row: utils.hash([row[key] for key in hash_keys]), axis=1),
+            name='hash'
+        )
     return df, rejects
 
 
