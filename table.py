@@ -94,7 +94,7 @@ def stat_df(source,
         LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
         df['pathdate'] = scan_pathdate(df, 'path')
 
-    return df, None
+    return df
 
 
 def scan_pathdate(df, scan_col='path'):
