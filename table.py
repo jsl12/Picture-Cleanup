@@ -115,7 +115,11 @@ def hash_index(df, hash_keys=None):
 
 def duplicate_sets(df: pd.DataFrame, keys=None):
     keys = keys or ['filename', 'st_size']
-    yield from (df[(df[keys] == row[keys]).all(axis=1)] for hash, row in df[df.duplicated(keys, keep=False)].iterrows())
+    yield from (
+        df[(df[keys] == row[keys]).all(axis=1)]             # select from df, the rows where all the specified columns match the corresponding values in the row
+        for idx, row in
+        df[df.duplicated(keys, keep='first')].iterrows()    # iterate through the rows of duplicates in df
+    )
 
 
 def dupicates_to_file(df: pd.DataFrame, file, keys=None):
