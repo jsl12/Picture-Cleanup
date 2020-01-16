@@ -52,6 +52,7 @@ def df_from_dir_texts(source):
 
 def stat_df(source,
             parse_pathdate=True,
+            min_size=50000,
             ext='all',
             exclude_folders=None,
             os_meta=True,
@@ -71,22 +72,18 @@ def stat_df(source,
 
     df = pd.concat(dfs, axis=1)
 
-    # initialize selection mask
-    master_mask = pd.Series(data=np.ones(df.shape[0], dtype=bool), index=df.index)
+    if min_size is not None:
+        df['above min file size'] = df['st_size'] > min_size
 
     if ext != 'all':
         assert all([isinstance(e, str) for e in ext])
         LOGGER.info(f'checking file extensions: {ext}')
-        ext_mask = filter_extension(df, ext, 'path')
-        master_mask &= ext_mask
+        df['included ext'] = filter_extension(df, ext, 'path')
 
     if exclude_folders is not None:
         assert all([isinstance(folder, str) for folder in exclude_folders])
         LOGGER.info(f'folder exclusions: {exclude_folders}')
-        exc_mask = filter_path(df, exclude_folders, 'path')
-        master_mask &= exc_mask
-
-    df, rejects = df[master_mask], df[~master_mask]
+        df['excluded dir'] = filter_path(df, exclude_folders, 'path')
 
     LOGGER.info(f'converting timestamps: {df.shape[0]} files')
     for col in df:
@@ -97,7 +94,7 @@ def stat_df(source,
         LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
         df['pathdate'] = scan_pathdate(df, 'path')
 
-    return df, rejects
+    return df, None
 
 
 def scan_pathdate(df, scan_col='path'):
@@ -176,7 +173,7 @@ def res_df(df, target_parent, keep=False, date_col='pathdate'):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    df, rejects = stat_df(
+    df = stat_df(
         source=Path('temp'),
         exclude_folders=['FFF'],
         ext=['.jpg']
