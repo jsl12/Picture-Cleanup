@@ -1,7 +1,9 @@
 import logging
 from datetime import datetime
 from pathlib import Path
+from types import GeneratorType
 
+import exifread
 import numpy as np
 import pandas as pd
 
@@ -48,18 +50,29 @@ def df_from_dir_texts(source):
     )
 
 
-def stat_df(source, hash=False, hash_keys=None, parse_pathdate=True, ext='all', exclude_folders=None):
+def stat_df(source,
+            parse_pathdate=True,
+            ext='all',
+            exclude_folders=None,
+            os_meta=True,
+            exif_meta=False,
+            stop_tag=exifread.DEFAULT_STOP_TAG):
     LOGGER.info(f'constructing df from: "{source}"')
-    files = [f for f in Path(source).glob('**\*.*')]
-    df = pd.concat([
-        pd.DataFrame(data={'path': files, 'filename': [f.name for f in files]}),
-        pd.DataFrame([extract_stats(f) for f in files])
-    ], axis=1)
+    fdf = file_df(source)
+    dfs = [fdf]
 
-    master_mask = pd.Series(
-        data=np.ones(df.shape[0], dtype=bool),
-        index=df.index
-    )
+    if os_meta:
+        LOGGER.info(f'reading os stats: {fdf.shape[0]} files')
+        dfs.append(pd.DataFrame([extract_stats(f) for f in fdf['path']]))
+
+    if exif_meta:
+        LOGGER.info(f'reading exif data: {fdf.shape[0]} files')
+        dfs.append(pd.DataFrame([extract_exif(f, stop_tag=stop_tag) for f in fdf['path']]))
+
+    df = pd.concat(dfs, axis=1)
+
+    # initialize selection mask
+    master_mask = pd.Series(data=np.ones(df.shape[0], dtype=bool), index=df.index)
 
     if ext != 'all':
         assert all([isinstance(e, str) for e in ext])
@@ -82,17 +95,40 @@ def stat_df(source, hash=False, hash_keys=None, parse_pathdate=True, ext='all', 
 
     if parse_pathdate:
         LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
-        df['pathdate'] = df['path'].apply(lambda p: utils.scan_date(p) or pd.NaT)
+        df['pathdate'] = scan_pathdate(df, 'path')
 
-    if hash:
-        df = hash_index(df, hash_keys)
     return df, rejects
+
+
+def scan_pathdate(df, scan_col='path'):
+    return df[scan_col].apply(lambda p: utils.scan_date(p) or pd.NaT)
+
+
+def file_df(source):
+    if isinstance(source, GeneratorType):
+        files = [f for f in source]
+    elif isinstance(source, Path):
+        files = [f for f in source.glob('**\*.*')]
+    elif isinstance(source, str):
+        files = [f for f in Path(source).glob('**\*.*')]
+    return pd.DataFrame(
+        data={
+            'filename': [f.name for f in files],
+            'path': files
+        }
+    )
 
 
 def extract_stats(path: Path):
     LOGGER.debug(f'getting os stats: "{path}"')
     stat_obj = Path(path).stat()
     return {key: getattr(stat_obj, key) for key in dir(stat_obj) if key[:3] == 'st_'}
+
+
+def extract_exif(path: Path, stop_tag=exifread.DEFAULT_STOP_TAG):
+    LOGGER.debug(f'getting exif data: "{path}"')
+    with Path(path).open('rb') as f:
+        return exifread.process_file(f, details=False, stop_tag=stop_tag)
 
 
 def filter_extension(df, ext, path_col='path'):
@@ -114,7 +150,7 @@ def hash_index(df, hash_keys=None):
 
 
 def handle_duplicates(df: pd.DataFrame, func, keys=None):
-    return df.groupby(keys or ['filename', 'st_size']).apply(func)
+    return df.groupby(keys or ['filename', 'st_size']).apply(func).reset_index(drop=True)
 
 
 def duplicate_sets(df: pd.DataFrame, keys=None, min=1):
