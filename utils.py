@@ -67,3 +67,15 @@ def scan_date(path):
                 )
     except Exception as e:
         pass
+
+def dfs_to_file(df_list, file):
+    with Path(file).open('w') as f:
+        for df in df_list:
+            f.write(('-' * 50) + '\n')
+            for idx, row in df.iterrows():
+                f.write('    '.join([
+                    str(row["pathdate"].date()),
+                    str(row["filename"]),
+                    f'{row["st_size"] / 1000:.2f} kB',
+                    str(row["path"])
+                ]) + '\n')

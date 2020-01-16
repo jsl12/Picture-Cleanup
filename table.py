@@ -118,13 +118,8 @@ def duplicate_sets(df: pd.DataFrame, keys=None):
     yield from (df[(df[keys] == row[keys]).all(axis=1)] for hash, row in df[df.duplicated(keys, keep=False)].iterrows())
 
 
-def dupicates_to_file(df, file):
-    with open(file, 'w') as file:
-        for dups in duplicate_sets(df):
-            file.write('-' * 50)
-            file.write('\n')
-            for hash, row in dups.iterrows():
-                file.write(f'{row["pathdate"].date()},    {row["filename"]},    {row["path"]}\n')
+def dupicates_to_file(df: pd.DataFrame, file, keys=None):
+    return utils.dfs_to_file([df for idx, df in df.groupby(keys or ['filename', 'st_size']) if df.shape[0] > 1], file)
 
 
 def res_df(df, target_parent, keep=False, date_col='pathdate'):
