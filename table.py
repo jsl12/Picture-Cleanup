@@ -47,9 +47,10 @@ def df_from_dir_texts(source):
     )
 
 
-def stat_df(source, hash_keys=None, parse_pathdate=True):
+def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_folders=None):
     LOGGER.info(f'constructing df from: "{source}"')
-    files = [f for f in source]
+    # files = [f for f in source.glob('**\*.*') if (ext is not None) and any([f.suffix == folder for folder in ext])]
+    files = [f for f in source.glob('**\*.*')]
     df = pd.concat([
         pd.DataFrame(data={'path': files, 'filename': [f.name for f in files]}),
         pd.DataFrame([extract_stats(f) for f in files])
@@ -67,9 +68,24 @@ def stat_df(source, hash_keys=None, parse_pathdate=True):
         if ('time' in col) and ('_ns' not in col):
             df[col] = pd.to_datetime(df[col].apply(datetime.fromtimestamp))
 
-    LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
+
     if parse_pathdate:
+        LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
         df['pathdate'] = df['path'].apply(utils.scan_date)
+
+
+    if ext is not 'all':
+        assert all([isinstance(e, str) for e in ext])
+        LOGGER.info(f'checking file extensions:')
+        ext_mask = pd.DataFrame(data={e: df['path'].apply(lambda p: p.suffix) == e for e in ext}).any(axis=1)
+        df = df[ext_mask]
+
+
+    if exclude_folders is not None:
+        assert all([isinstance(folder, str) for folder in exclude_folders])
+        LOGGER.info(f'folder exclusions: {exclude_folders}')
+        exc_mask = pd.DataFrame(data={folder: df['path'].apply(lambda p: folder in str(p)) for folder in exclude_folders}).any(axis=1)
+        df = df[~exc_mask]
 
     return df
 
@@ -82,5 +98,9 @@ def extract_stats(path: Path):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    df = stat_df(Path('temp').glob('**\*.jpg'))
+    df = stat_df(
+        source=Path('temp'),
+        exclude_folders=['Work', '']
+        # ext=['.jpg']
+    )
     print(df[['path', 'pathdate']])
