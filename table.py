@@ -107,8 +107,7 @@ def hash_index(df, hash_keys=None):
 
 def duplicate_sets(df: pd.DataFrame, keys=None):
     keys = keys or ['filename', 'st_size']
-    for i, row in df[df.duplicated(keys, keep=False)].iterrows():
-        yield df[(df[keys] == row[keys]).all(axis=1)]
+    yield from (df[(df[keys] == row[keys]).all(axis=1)] for hash, row in df[df.duplicated(keys, keep=False)].iterrows())
 
 
 def dupicates_to_file(df, file):
@@ -118,6 +117,7 @@ def dupicates_to_file(df, file):
             file.write('\n')
             for hash, row in dups.iterrows():
                 file.write(f'{row["pathdate"].date()},    {row["filename"]},    {row["path"]}\n')
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
