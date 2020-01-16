@@ -74,7 +74,7 @@ def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_fold
         df['pathdate'] = df['path'].apply(utils.scan_date)
 
 
-    if ext is not 'all':
+    if ext != 'all':
         assert all([isinstance(e, str) for e in ext])
         LOGGER.info(f'checking file extensions:')
         ext_mask = pd.DataFrame(data={e: df['path'].apply(lambda p: p.suffix) == e for e in ext}).any(axis=1)
