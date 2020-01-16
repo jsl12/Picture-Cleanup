@@ -76,7 +76,7 @@ def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_fold
 
     if ext != 'all':
         assert all([isinstance(e, str) for e in ext])
-        LOGGER.info(f'checking file extensions:')
+        LOGGER.info(f'checking file extensions: {ext}')
         ext_mask = pd.DataFrame(data={e: df['path'].apply(lambda p: p.suffix) == e for e in ext}).any(axis=1)
         df = df[ext_mask]
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     df = stat_df(
         source=Path('temp'),
-        exclude_folders=['Work', '']
-        # ext=['.jpg']
+        exclude_folders=['FFF']
+        ext=['.jpg']
     )
     print(df[['path', 'pathdate']])
