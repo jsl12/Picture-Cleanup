@@ -64,13 +64,13 @@ def stat_df(source, hash=False, hash_keys=None, parse_pathdate=True, ext='all', 
     if ext != 'all':
         assert all([isinstance(e, str) for e in ext])
         LOGGER.info(f'checking file extensions: {ext}')
-        ext_mask = pd.DataFrame(data={e: df['path'].apply(lambda p: p.suffix.upper()) == e.upper() for e in ext}).any(axis=1)
+        ext_mask = filter_extension(df, ext, 'path')
         master_mask &= ext_mask
 
     if exclude_folders is not None:
         assert all([isinstance(folder, str) for folder in exclude_folders])
         LOGGER.info(f'folder exclusions: {exclude_folders}')
-        exc_mask = pd.DataFrame(data={folder: df['path'].apply(lambda p: folder.upper() in str(p).upper()) for folder in exclude_folders}).any(axis=1)
+        exc_mask = filter_path(df, exclude_folders, 'path')
         master_mask &= exc_mask
 
     df, rejects = df[master_mask], df[~master_mask]
@@ -95,6 +95,14 @@ def extract_stats(path: Path):
     return {key: getattr(stat_obj, key) for key in dir(stat_obj) if key[:3] == 'st_'}
 
 
+def filter_extension(df, ext, path_col='path'):
+    return pd.DataFrame(data={e: df[path_col].apply(lambda p: p.suffix.upper()) == e.upper() for e in ext}).any(axis=1)
+
+
+def filter_path(df, exc, path_col='path'):
+    return pd.DataFrame(data={folder: df[path_col].apply(lambda p: folder.upper() in str(p).upper()) for folder in exc}).any(axis=1)
+
+
 def hash_index(df, hash_keys=None):
     LOGGER.info(f'hashing indices: {df.shape[0]} files')
     hash_keys = hash_keys or ['filename', 'st_size']
@@ -117,6 +125,14 @@ def dupicates_to_file(df, file):
             file.write('\n')
             for hash, row in dups.iterrows():
                 file.write(f'{row["pathdate"].date()},    {row["filename"]},    {row["path"]}\n')
+
+
+def res_df(df, target_parent, keep=False, date_col='pathdate'):
+    df = df[~df.index.duplicated(keep=keep)]
+    df = df[~pd.isnull(df[date_col])]
+    df['res'] = df.apply(lambda row: target_parent / row[date_col].strftime('%Y') / row[date_col].strftime('%m %B') / row['filename'], axis=1)
+    df['rel'] = df['res'].apply(lambda p: p.relative_to(target_parent))
+    return df[['rel', 'path']]
 
 
 if __name__ == '__main__':
