@@ -66,7 +66,7 @@ def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_fold
         LOGGER.info(f'folder exclusions: {exclude_folders}')
         exc_mask = pd.DataFrame(data={folder: df['path'].apply(lambda p: folder in str(p)) for folder in exclude_folders}).any(axis=1)
 
-    master_mask = (ext_mask | ~exc_mask)
+    master_mask = (ext_mask & ~exc_mask)
     df, rejects = df[master_mask], df[~master_mask]
 
     LOGGER.info(f'converting timestamps: {df.shape[0]} files')
