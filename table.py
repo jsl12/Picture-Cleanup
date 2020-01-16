@@ -76,7 +76,7 @@ def stat_df(source, hash_keys=None, parse_pathdate=True, ext='all', exclude_fold
 
     if parse_pathdate:
         LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
-        df['pathdate'] = df['path'].apply(utils.scan_date)
+        df['pathdate'] = df['path'].apply(lambda p: utils.scan_date(p) or pd.NaT)
 
     LOGGER.info(f'hashing indices: {df.shape[0]} files')
     hash_keys = hash_keys or ['filename', 'st_size']
