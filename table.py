@@ -59,31 +59,32 @@ def stat_df(source,
             exif_meta=False,
             stop_tag=exifread.DEFAULT_STOP_TAG):
     LOGGER.info(f'constructing df from: "{source}"')
-    fdf = file_df(source)
-    dfs = [fdf]
+    df = file_df(source)
 
-    if os_meta:
-        LOGGER.info(f'reading os stats: {fdf.shape[0]} files')
-        dfs.append(pd.DataFrame([extract_stats(f) for f in fdf['path']]))
-
-    if exif_meta:
-        LOGGER.info(f'reading exif data: {fdf.shape[0]} files')
-        dfs.append(pd.DataFrame([extract_exif(f, stop_tag=stop_tag) for f in fdf['path']]))
-
-    df = pd.concat(dfs, axis=1)
-
-    if min_size is not None:
-        df['above min file size'] = df['st_size'] > min_size
+    if exclude_folders is not None:
+        assert all([isinstance(folder, str) for folder in exclude_folders])
+        LOGGER.info(f'folder exclusions: {exclude_folders}')
+        df['excluded dir'] = filter_path(df, exclude_folders, 'path')
 
     if ext != 'all':
         assert all([isinstance(e, str) for e in ext])
         LOGGER.info(f'checking file extensions: {ext}')
         df['included ext'] = filter_extension(df, ext, 'path')
 
-    if exclude_folders is not None:
-        assert all([isinstance(folder, str) for folder in exclude_folders])
-        LOGGER.info(f'folder exclusions: {exclude_folders}')
-        df['excluded dir'] = filter_path(df, exclude_folders, 'path')
+    dfs = [df]
+
+    if os_meta:
+        LOGGER.info(f'reading os stats: {df.shape[0]} files')
+        dfs.append(pd.DataFrame([extract_stats(f) for f in df['path']]))
+
+    if exif_meta:
+        LOGGER.info(f'reading exif data: {df.shape[0]} files')
+        dfs.append(pd.DataFrame([extract_exif(f, stop_tag=stop_tag) for f in df['path']]))
+
+    df = pd.concat(dfs, axis=1)
+
+    if min_size is not None:
+        df['above min file size'] = df['st_size'] > min_size
 
     LOGGER.info(f'converting timestamps: {df.shape[0]} files')
     for col in df:
