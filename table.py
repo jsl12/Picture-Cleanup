@@ -161,7 +161,7 @@ def handle_duplicates(df: pd.DataFrame, func, keys=None):
 def duplicate_sets(df: pd.DataFrame, keys=None, min=1):
     yield from (
         dup_set                                         # dup_set is a DataFrame
-        for (filename, size), dup_set in                # with the groupby object, the iterations will also have the 2 values it is grouping by
+        for idx, dup_set in                # with the groupby object, the iterations will also have the 2 values it is grouping by
         df.groupby(keys or ['filename', 'st_size'])     # group all the sets with unique combinations of values specified by keys
         if dup_set.shape[0] > min                       # only if the set contains more than 1 item
     )
