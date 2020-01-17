@@ -125,8 +125,11 @@ def extract_stats(path: Path):
 
 def extract_exif(path: Path, stop_tag=exifread.DEFAULT_STOP_TAG):
     LOGGER.debug(f'getting exif data: "{path}"')
-    with Path(path).open('rb') as f:
-        return exifread.process_file(f, details=False, stop_tag=stop_tag)
+    try:
+        with Path(path).open('rb') as f:
+            return exifread.process_file(f, details=False, stop_tag=stop_tag)
+    except PermissionError as e:
+        return {}
 
 
 def filter_extension(df, ext, path_col='path'):
