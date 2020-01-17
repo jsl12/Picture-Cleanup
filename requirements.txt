@@ -4,3 +4,5 @@ click
 pyyaml
 pandas
 exifread
+jupyterlab
+qgrid
