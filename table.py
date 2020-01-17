@@ -51,6 +51,7 @@ def df_from_dir_texts(source):
 
 
 def stat_df(source,
+            keep_cols=None,
             parse_pathdate=True,
             min_size=50000,
             ext='all',
@@ -94,6 +95,9 @@ def stat_df(source,
     if parse_pathdate:
         LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
         df['pathdate'] = scan_pathdate(df, 'path')
+
+    if keep_cols is not None:
+        df = df[keep_cols]
 
     return df
 
