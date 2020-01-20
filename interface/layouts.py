@@ -6,49 +6,47 @@ top_level = ly(
     # border='solid 1px blue'
 )
 
-flex_col = ly(
+options_section = ly(
     display='flex',
-    flex_flow='column nowrap',
-    flex='0 1 40%',
-    padding='10px',
-    # border='solid 1px red',
+    flex='1 1 auto',
+    # width='100%',
+    # border='solid 1px red'
 )
 
-select_label = ly(
+options_container = ly(
     display='flex',
-    flex='0 1 auto',
+    flex='9 1 0%',
+    flex_flow='column nowrap',
+    # width='100%',
     # border='solid 1px green'
 )
 
-col_select = ly(
+opts_bar = ly(
     display='flex',
-    flex='1 1',
-    height='100%',
+    flex='1 1 auto',
     width='100%'
 )
 
-o = 'hidden'
-opts_col = ly(
+output = ly(
+    display='flex',
+    # flex='1 1 0%',
+    width='250px'
+    # border='solid 1px green'
+)
+
+exclude_col = ly(
     display='flex',
     flex='1 1 0%',
     flex_flow='column nowrap',
-    align_items='stretch',
-    padding='10px',
-    # border='solid 1px red',
+    # padding='15px',
+    # border='solid 1px green'
 )
 
-dup_type = ly(
+exclude_section = ly(
     display='flex',
-    flex='0 1 auto',
+    flex='1 1 auto',
+    flex_flow='row nowrap',
     width='100%',
-    # padding='10px',
-    # border='solid 1px blue'
-)
-
-dup_button = ly(
-    display='flex',
-    flex='0 1 auto',
-    # height='25%',
-    width='100%',
-    align_self='center',
+    padding='15px',
+    # border='solid 1px red'
 )

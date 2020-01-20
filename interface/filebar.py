@@ -5,9 +5,11 @@ import pandas as pd
 import qgrid
 from ipywidgets import Layout as ly
 
+from . import layouts
+
 
 class FileBar(widgets.HBox):
-    def __init__(self, button_text, **kwargs):
+    def __init__(self, button_text, output=None, **kwargs):
         children = [
             widgets.Button(
                 description=button_text,
@@ -28,28 +30,22 @@ class FileBar(widgets.HBox):
                     display='flex',
                     flex='0 1 65px'
                 )
-            ),
-            widgets.Output(
-                layout=ly(
-                    display='flex',
-                    flex='0 1 150px'
-                )
             )
         ]
         if 'layout' not in kwargs:
-            kwargs['layout'] = ly(
-                display='flex',
-                flex='1 1 auto',
-                width='100%'
-            )
+            kwargs['layout'] = layouts.opts_bar
+
+        if output is not None:
+            self.output = output
+
         super().__init__(children, **kwargs)
 
 
 class LoadBar(FileBar):
-    def __init__(self, qgrid_obj, **kwargs):
+    def __init__(self, qgrid_obj, handler, **kwargs):
         self.qg = qgrid_obj
         super().__init__(button_text='Load Pickle', **kwargs)
-        self.children[0].on_click(self.load_file)
+        self.children[0].on_click(handler)
         self.children[2].on_click(self.browse_file)
 
     def browse_file(self, *args):
@@ -61,15 +57,19 @@ class LoadBar(FileBar):
         root.destroy()
 
     def load_file(self, *args):
-        with self.children[-1]:
-            try:
-                df = pd.read_pickle(self.children[1].value)
-            except Exception as e:
-                print(f'Failed to read')
-            else:
-                print(f'Read {df.shape[0]} lines')
-            df.index = pd.RangeIndex(stop=df.shape[0], name='guid')
-            self.qg.df = df
+        try:
+            df = pd.read_pickle(self.children[1].value)
+        except Exception as e:
+            self.print(f'Failed to read')
+        else:
+            self.print(f'Read {df.shape[0]} lines')
+        df.index = pd.RangeIndex(stop=df.shape[0], name='guid')
+        return df
+
+    def print(self, s):
+        if hasattr(self, 'output'):
+            with self.output:
+                print(s)
 
 
 class SaveBar(FileBar):
@@ -80,14 +80,17 @@ class SaveBar(FileBar):
         self.children[2].on_click(self.browse)
 
     def save(self, *args):
-        df = self.qg.get_changed_df()
-        with self.children[-1]:
-            try:
-                df.to_pickle(self.children[1].value)
-            except Exception as e:
-                print(f'Failed saving')
+        with self.output:
+            if self.children[1].value != '':
+                df = self.qg.get_changed_df()
+                try:
+                    df.to_pickle(self.children[1].value)
+                except Exception as e:
+                    print(f'Failed saving\n{repr(e)}')
+                else:
+                    print(f'Saved')
             else:
-                print(f'Saved')
+                print('No file selected to save')
 
     def browse(self, *args):
         root = Tk()
