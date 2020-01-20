@@ -13,7 +13,7 @@ class DupInterface:
         self.default_columns = default_columns or ['filename', 'st_size', 'path']
         dup_pre_sel = dup_pre_sel or ['st_size']
 
-        self.output = widgets.Output()
+        self.output = widgets.Output(layout=ly(height='80px'))
 
         self.col_select = widgets.SelectMultiple(
             options=df.columns.to_list(),
@@ -32,18 +32,18 @@ class DupInterface:
         self.dup_type = widgets.Dropdown(
             options={'First': 'first', 'Last': 'last', 'All': False},
             value=False,
-            layout=ly(
-                flex='1 1 auto',
-                width='100%',
-                padding='10px'
-            )
+            layout=layouts.dup_type
         )
+
+        self.button_ext_filter = widgets.ToggleButton(description='Filter Ext', layout=layouts.dup_button)
+        self.button_dup_filter = widgets.Button(description='Show Dups', layout=layouts.dup_button)
 
         self.dup_select.observe(self.main_select, 'value')
         self.col_select.observe(lambda *args, **kwargs: print('value event'), 'value')
         self.dup_type.observe(self.main_select, 'value')
         self.main_grid.on('selection_changed', self.main_select)
         self.col_select.observe(self.refresh, 'value')
+        self.button_dup_filter.on_click(self.filter_dups)
 
     @property
     def widget(self):
@@ -68,7 +68,9 @@ class DupInterface:
                         ),
                         widgets.VBox(
                             children=[
-                                self.dup_type
+                                self.button_ext_filter,
+                                self.dup_type,
+                                self.button_dup_filter
                             ],
                             layout=layouts.opts_col
                         )
@@ -81,26 +83,43 @@ class DupInterface:
             layout=layouts.top_level
         )
 
+    def filter_dups(self, *args, **kwargs):
+        res = self._df[self._df.duplicated(list(self.dup_select.value), keep=self.dup_type.value)]
+        self.main_grid.df = res
+        with self.output as out:
+            clear_output()
+            print(f'Showing {res.shape[0]} duplicates')
+
     def main_select(self, *args, **kwargs):
         with self.output as out:
             clear_output()
-            type = self.dup_type.value
-            dup_cols = list(self.dup_select.value)
-            show_cols = set(list(self.col_select.value) + dup_cols)
-            df = self.df[show_cols]
-            sel = self.sel.drop_duplicates(dup_cols, keep='first')[show_cols]
+            keep = self.dup_type.value
+            dup_cols = self.dup_cols
+
+            df = self.shown_df
+            sel = self.sel.drop_duplicates(dup_cols, keep='first')[self.show_cols]
             print(f'{sel.shape[0]} files selected')
+
             if sel.shape[0] == 0:
                 return
 
-            dups = df[df.duplicated(dup_cols, keep=type)]
+            dups = df[df.duplicated(dup_cols, keep=keep)]
             print(f'Showing duplicates with respect to:\n{", ".join(dup_cols)}')
+
             res = pd.concat([dups[(row[dup_cols] == dups[dup_cols]).all(axis=1)] for i, row in sel.iterrows()])
             print(f'{res.shape[0]} total files')
         self.dup_display.df = res
 
     def refresh(self, *args, **kwargs):
-        self.main_grid.df = self._df[list(self.col_select.value) + list(self.dup_select.value)]
+        self.main_grid.df = self.shown_df
+
+    @property
+    def dup_cols(self):
+        return list(self.dup_select.value)
+
+    @property
+    def show_cols(self):
+        return pd.Series(list(self.col_select.value) + self.dup_cols).drop_duplicates(keep='first').to_list()
 
     @property
     def sel(self):
@@ -109,6 +128,13 @@ class DupInterface:
     @property
     def df(self):
         return self.main_grid.get_changed_df()
+
+    @property
+    def shown_df(self):
+        if hasattr(self, 'ext'):
+            return self._df[pd.DataFrame(data={e: self._df['path'].apply(lambda p: p.suffix.upper()) == e.upper() for e in self.ext}).any(axis=1)][self.show_cols]
+        else:
+            return self._df[self.show_cols]
 
 
 if __name__ == '__main__':
