@@ -19,10 +19,7 @@ class DupInterface:
         self.main_grid = qgrid.show_grid(self.df, **qgrid_opts)
         self.dup_display = qgrid.show_grid(pd.DataFrame(columns=self.default_columns), **qgrid_opts)
 
-
-        self.dup_bar = duplicate_bar(self.main_grid, dup_pre_sel)
-        self.dup_bar.children[0].observe(self.drop_dups)
-
+        self.dup_bar = DupBar(self._cols, self.drop_dups)
         self.main_grid.on('selection_changed', self.main_select)
 
     @property
@@ -37,18 +34,14 @@ class DupInterface:
         )
 
     def drop_dups(self, *args, **kwargs):
-        print('drop dups')
-        with self.dup_bar.children[-1]:
+        with self.dup_bar.out:
             clear_output()
-            keep = self.dup_bar.children[0].value
-            cols = list(self.dup_bar.children[1].value)
-
             df = self.df
-            if keep == -1:
+            if self.dup_bar.keep == -1:
                 self.main_grid.df = df
                 print(f'Reset table - including all duplicates')
             else:
-                dups = df.duplicated(cols, keep=keep)
+                dups = df.duplicated(self.dup_bar.cols, keep=self.dup_bar.keep)
                 dropped = df[dups]
                 res = df[~dups]
                 print(f'{"Initial size:":20}{df.shape[0]}')
@@ -60,7 +53,7 @@ class DupInterface:
         with self.output as out:
             clear_output()
             keep = self.dup_type.value
-            dup_cols = self.dup_cols
+            dup_cols = self.dup_bar.cols
 
             df = self.df
             sel = self.sel.drop_duplicates(dup_cols, keep='first')[self._cols]
@@ -93,39 +86,57 @@ class DupInterface:
         return self._df[self._cols]
 
 
-def duplicate_bar(qgrid_obj: qgrid.QGridWidget, defaults=['st_size']):
-    df = qgrid_obj.get_changed_df()
-    out = widgets.Output(layout=ly(
-        display='flex',
-        flex='1 1 0%',
-    ))
-    w = widgets.HBox(
-        children=[
-            widgets.Dropdown(
-                options={'None': -1, 'First': 'first', 'Last': 'last', 'All': False},
-                value=-1,
-                layout=ly(
-                    display='flex',
-                    # flex='1 1 0%',
-                    width='65px'
-                )
-            ),
-            widgets.SelectMultiple(
-                options=df.columns.to_list(),
-                value=defaults,
-                layout=ly(
-                    display='flex',
-                    flex='1 1 0%',
-                )
-            ),
-            out
-        ],
-        layout=ly(
-            display='flex',
-            flex_flow='row wrap'
-        )
-    )
-    return w
+class DupBar(widgets.HBox):
+    def __init__(self, cols, handler=None, default=['st_size'], **kwargs):
+        children = [
+               widgets.Dropdown(
+                   options={'None': -1, 'First': 'first', 'Last': 'last', 'All': False},
+                   value=-1,
+                   layout=ly(
+                       display='flex',
+                       # flex='1 1 0%',
+                       width='65px'
+                   )
+               ),
+               widgets.SelectMultiple(
+                   options=cols,
+                   value=default,
+                   layout=ly(
+                       display='flex',
+                       flex='1 1 0%',
+                   )
+               ),
+               widgets.Output(
+                   layout=ly(
+                       display='flex',
+                       flex='1 1 0%',
+                   )
+               )
+        ]
+
+        if 'layout' not in kwargs:
+            kwargs['layout'] = ly(
+                display='flex',
+                flex='1 1 auto',
+                width='100%'
+            )
+
+        super().__init__(children, **kwargs)
+
+        if handler is not None:
+            self.children[0].observe(handler, 'value')
+
+    @property
+    def keep(self):
+        return self.children[0].value
+
+    @property
+    def cols(self):
+        return list(self.children[1].value)
+
+    @property
+    def out(self):
+        return self.children[-1]
 
 
 if __name__ == '__main__':
