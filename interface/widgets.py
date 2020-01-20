@@ -17,14 +17,14 @@ class DupInterface:
 
         self.output = widgets.Output(layout=ly(height='100px', overflow='scroll'))
 
-        self.main_grid = qgrid.show_grid(self.df, **qgrid_opts)
-        self.dup_display = qgrid.show_grid(pd.DataFrame(columns=self.default_columns), **qgrid_opts)
+        self.qg = qgrid.show_grid(self.df, **qgrid_opts)
+        self.qg_dup = qgrid.show_grid(pd.DataFrame(columns=self.default_columns), **qgrid_opts)
 
         self.dup_bar = DupBar(self._cols, self.drop_dups, default=dup_pre_sel)
-        self.main_grid.on('selection_changed', self.main_select)
+        self.qg.on('selection_changed', self.main_select)
 
-        self.loader = LoadBar(self.main_grid)
-        self.saver = SaveBar(self.main_grid)
+        self.loader = LoadBar(self.qg)
+        self.saver = SaveBar(self.qg)
 
     @property
     def widget(self):
@@ -33,9 +33,9 @@ class DupInterface:
                 self.loader,
                 self.saver,
                 self.dup_bar,
-                self.main_grid,
+                self.qg,
                 self.output,
-                self.dup_display,
+                self.qg_dup,
             ],
             layout=layouts.top_level
         )
@@ -45,7 +45,7 @@ class DupInterface:
             clear_output()
             df = self.df
             if self.dup_bar.keep == -1:
-                self.main_grid.df = df
+                self.qg.df = df
                 print(f'Reset table - including all duplicates')
             else:
                 dups = df.duplicated(self.dup_bar.cols, keep=self.dup_bar.keep)
@@ -54,7 +54,7 @@ class DupInterface:
                 print(f'{"Initial size:":20}{df.shape[0]}')
                 print(f'{"Dropped:":20}{dropped.shape[0]}')
                 print(f'{"Remaining:":20}{res.shape[0]}')
-                self.main_grid.df = res
+                self.qg.df = res
 
     def main_select(self, *args, **kwargs):
         with self.output as out:
@@ -72,19 +72,11 @@ class DupInterface:
 
             res = pd.concat([dups[(row[dup_cols] == dups[dup_cols]).all(axis=1)] for i, row in sel.iterrows()])
             print(f'{res.shape[0]} total files')
-        self.dup_display.df = res
-
-    @property
-    def dup_cols(self):
-        return list(self.dup_bar.children[2].value)
+        self.qg_dup.df = res
 
     @property
     def sel(self):
-        return self.main_grid.get_selected_df()
-
-    @property
-    def dfx(self):
-        return self.main_grid.get_changed_df()
+        return self.qg.get_selected_df()
 
     @property
     def df(self):

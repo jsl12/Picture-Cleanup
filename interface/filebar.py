@@ -48,7 +48,7 @@ class FileBar(widgets.HBox):
 class LoadBar(FileBar):
     def __init__(self, qgrid_obj, **kwargs):
         self.qg = qgrid_obj
-        super(LoadBar, self).__init__(button_text='Load Pickle', **kwargs)
+        super().__init__(button_text='Load Pickle', **kwargs)
         self.children[0].on_click(self.load_file)
         self.children[2].on_click(self.browse_file)
 
@@ -75,7 +75,7 @@ class LoadBar(FileBar):
 class SaveBar(FileBar):
     def __init__(self, qgrid_obj: qgrid.QGridWidget, **kwargs):
         self.qg = qgrid_obj
-        super(SaveBar, self).__init__(button_text='Save Pickle', **kwargs)
+        super().__init__(button_text='Save Pickle', **kwargs)
         self.children[0].on_click(self.save)
         self.children[2].on_click(self.browse)
 
