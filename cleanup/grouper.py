@@ -5,7 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
-from cleanup import utils
+from . import utils
+from .df import scan_date
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ def files_and_dates(base_path, **kwargs):
 def file_date_gen(base_path, glob='**\*.jpg'):
     for file in Path(base_path).glob(glob):
         try:
-            yield file, utils.scan_date(file)
+            yield file, scan_date(file)
         except Exception as e:
             pass
 

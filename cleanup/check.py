@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from cleanup import log, utils
-
+from . import log, utils
+from .df.utils import scan_date
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,14 +46,14 @@ def check_date_parse(source, logfile=None, glob_str=None):
     if isinstance(glob_str, str):
         source = source.glob(glob_str)
     else:
-        source = paths_from_dir_txt(source)
+        source = utils.paths_from_dir_txt(source)
 
     start = time.time()
     total, parsed = 0, 0
     for path in source:
         total += 1
         try:
-            pathdate = utils.scan_date(path)
+            pathdate = scan_date(path)
         except Exception as e:
             LOGGER.exception(repr(e))
             continue
@@ -69,24 +69,6 @@ def check_date_parse(source, logfile=None, glob_str=None):
     LOGGER.info(f'parse time: {parse_time :.2f}s')
     LOGGER.info(f'parse rate: {parse_rate :.2f}%')
     return parse_rate, parse_time
-
-
-def paths_from_dir_txt(path, ext='jpg'):
-    path = Path(path)
-    for file in path.glob('*.txt'):
-        with file.open('r') as f:
-            line = True
-            while line:
-                line = f.readline()
-                try:
-                    p = Path(line.strip())
-                except Exception as e:
-                    continue
-                else:
-                    if ext is not None and p.suffix == f'.{ext}':
-                        yield p
-                    elif ext is None and p.suffix != '':
-                        yield p
 
 
 def df_copied(logfile):
@@ -115,11 +97,3 @@ def csv_copied(logfile, csv_path):
     return df
 
 
-def df_from_dir_texts(source):
-    files = [f for f in check.paths_from_dir_txt(source)]
-    return pd.DataFrame(
-        data={
-            'path': files,
-            'filename': [f.name for f in files]
-        }
-    )

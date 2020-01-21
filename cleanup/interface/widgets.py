@@ -7,11 +7,11 @@ import qgrid
 import yaml
 from IPython.display import clear_output
 
+from ..df import utils
 from . import layouts
 from .dupbar import DupBar
 from .excbar import FilterSection
 from .filebar import LoadBar, SaveBar
-
 
 class DupInterface:
     @staticmethod
@@ -133,7 +133,7 @@ class DupInterface:
     def reload(self, *args):
         with self.output:
             clear_output()
-        self._df = self.loader.load_file(*args)
+            self._df = self.loader.load_file(*args)
         self.render(clear=False)
 
     def render(self, *args, **kwargs):
@@ -194,12 +194,7 @@ class DupInterface:
         return list(self.exclude_section.children[0].children[-1].value)
 
     def mask_exclude_folders(self):
-        self._mask_exf = pd.DataFrame(
-            {
-                folder: self._df['path'].apply(str).str.contains(folder, case=False)
-                for folder in self.exclude_folders
-            }
-        ).any(axis=1)
+        self._mask_exf = utils.filter_path(self._df, self.exclude_folders, 'path')
         if self.exclude_section.children[0].children[0].value:
             return self._mask_exf
 
@@ -208,12 +203,7 @@ class DupInterface:
         return list(self.exclude_section.children[1].children[-1].value)
 
     def mask_include_ext(self):
-        self._mask_ext = pd.DataFrame(
-            {
-                ext: self._df['path'].apply(lambda p: p.suffix) == ext
-                for ext in self.include_ext
-            }
-        ).any(axis=1)
+        self._mask_ext = utils.filter_extension(self._df, self.include_ext, 'path')
         if self.exclude_section.children[1].children[0].value:
             return self._mask_ext
 

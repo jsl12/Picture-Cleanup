@@ -1,3 +1,4 @@
+from pathlib import Path
 from tkinter import filedialog, Tk
 
 import ipywidgets as widgets
@@ -62,9 +63,11 @@ class LoadBar(FileBar):
 
     def load_file(self, *args):
         try:
-            df = pd.read_pickle(self.children[1].value)
+            path = Path(self.children[1].value)
+            print(f'Reading {path.stat().st_size / (10**6):.2f} MB')
+            df = pd.read_pickle(path)
         except Exception:
-            raise ValueError(f'failed to read from: {self.children[1].value}')
+            raise ValueError(f'failed to read from: {path}')
         else:
             self.print(f'Read {df.shape[0]} lines, {df.shape[1]} columns')
             df.index = pd.RangeIndex(stop=df.shape[0], name='guid')
