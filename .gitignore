@@ -3,3 +3,5 @@ venv
 temp*
 .idea
 jsl*
+*.egg*
+*.ipynb*
