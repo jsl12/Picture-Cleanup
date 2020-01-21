@@ -114,7 +114,7 @@ class DupInterface:
             if sel.shape[0] == 0:
                 return
 
-            df = self._df
+            df = self.df
             dups = df[df.duplicated(dup_cols, keep=False)][self._cols]
             # print(f'Showing duplicates with respect to:\n{", ".join(dup_cols)}')
 
