@@ -1,16 +1,5 @@
-import pandas as pd
-import yaml
+from cleanup.interface import DupInterface
 
-from interface import DupInterface
+di = DupInterface.from_yaml(r'jsl\jsl.yaml')
 
-with open(r'jsl\jsl.yaml', 'r') as file:
-    cfg = yaml.load(file, Loader=yaml.SafeLoader)
-
-di = DupInterface(
-    pd.DataFrame(),
-    qgrid_opts=cfg.get('qgrid', {}),
-    default_columns=cfg.get('default_columns', None),
-    dup_pre_sel=cfg.get('default_duplicates', None),
-    exclude_folders=cfg['exclude_folders'],
-    include_ext=cfg['ext']
-)
+di.reload()

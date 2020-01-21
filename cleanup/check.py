@@ -3,17 +3,20 @@ import shutil
 import time
 from pathlib import Path
 
-import log
-import utils
+import pandas as pd
+
+from cleanup import log, utils
+
 
 LOGGER = logging.getLogger(__name__)
+
 
 def check_exif(logfile):
     for line, path in log.errors(logfile):
         try:
             exif_data = utils.read_exif(path)
             pic_date = utils.extract_date_from_exif(exif_data)
-        except:
+        except Exception as e:
             print(f'Bad exif data:\n{path}')
         else:
             print(f'Good exif data:\n{path}\n{pic_date.strftime("%y-%m-%d %H:%M:%S")}')
@@ -84,3 +87,39 @@ def paths_from_dir_txt(path, ext='jpg'):
                         yield p
                     elif ext is None and p.suffix != '':
                         yield p
+
+
+def df_copied(logfile):
+    sources, destinations = [list(i) for i in zip(*log.copied_files(logfile))]
+    return pd.DataFrame(
+        data={
+            'source': sources,
+            'destination': destinations
+        }
+    )
+
+
+def df_errors(logfile):
+    paths, error_lines = [list(i) for i in zip(*log.errors(logfile))]
+    return pd.DataFrame(
+        data={
+            'file': paths,
+            'error line': error_lines
+        }
+    )
+
+
+def csv_copied(logfile, csv_path):
+    df = df_copied(logfile)
+    df.to_csv(csv_path, index=False)
+    return df
+
+
+def df_from_dir_texts(source):
+    files = [f for f in check.paths_from_dir_txt(source)]
+    return pd.DataFrame(
+        data={
+            'path': files,
+            'filename': [f.name for f in files]
+        }
+    )

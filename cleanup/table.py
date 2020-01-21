@@ -4,50 +4,11 @@ from pathlib import Path
 from types import GeneratorType
 
 import exifread
-import numpy as np
 import pandas as pd
 
-import check
-import log
-import utils
+from cleanup import utils
 
 LOGGER = logging.getLogger(__name__)
-
-
-def df_copied(logfile):
-    sources, destinations = [list(i) for i in zip(*log.copied_files(logfile))]
-    return pd.DataFrame(
-        data={
-            'source': sources,
-            'destination': destinations
-        }
-    )
-
-
-def df_errors(logfile):
-    paths, error_lines = [list(i) for i in zip(*log.errors(logfile))]
-    return pd.DataFrame(
-        data={
-            'file': paths,
-            'error line': error_lines
-        }
-    )
-
-
-def csv_copied(logfile, csv_path):
-    df = df_copied(logfile)
-    df.to_csv(csv_path, index=False)
-    return df
-
-
-def df_from_dir_texts(source):
-    files = [f for f in check.paths_from_dir_txt(source)]
-    return pd.DataFrame(
-        data={
-            'path': files,
-            'filename': [f.name for f in files]
-        }
-    )
 
 
 def stat_df(source,
@@ -60,7 +21,10 @@ def stat_df(source,
             exif_meta=False,
             stop_tag=exifread.DEFAULT_STOP_TAG):
     LOGGER.info(f'constructing df from: "{source}"')
+
     df = file_df(source)
+    if df is None:
+        return pd.DataFrame()
 
     if exclude_folders is not None:
         assert all([isinstance(folder, str) for folder in exclude_folders])
@@ -107,18 +71,22 @@ def scan_pathdate(df, scan_col='path'):
 
 
 def file_df(source):
-    if isinstance(source, GeneratorType):
-        files = [f for f in source]
-    elif isinstance(source, Path):
-        files = [f for f in source.glob('**\*.*')]
-    elif isinstance(source, str):
-        files = [f for f in Path(source).glob('**\*.*')]
-    return pd.DataFrame(
-        data={
-            'filename': [f.name for f in files],
-            'path': files
-        }
-    )
+    try:
+        if isinstance(source, GeneratorType):
+            files = [f for f in source]
+        elif isinstance(source, Path):
+            files = [f for f in source.glob('**\*.*')]
+        elif isinstance(source, str):
+            files = [f for f in Path(source).glob('**\*.*')]
+    except OSError as e:
+        LOGGER.exception(repr(e))
+    else:
+        return pd.DataFrame(
+            data={
+                'filename': [f.name for f in files],
+                'path': files
+            }
+        )
 
 
 def extract_stats(path: Path):
@@ -140,18 +108,8 @@ def filter_extension(df, ext, path_col='path'):
     return pd.DataFrame(data={e: df[path_col].apply(lambda p: p.suffix.upper()) == e.upper() for e in ext}).any(axis=1)
 
 
-def filter_path(df, exc, path_col='path'):
-    return pd.DataFrame(data={folder: df[path_col].apply(lambda p: folder.upper() in str(p).upper()) for folder in exc}).any(axis=1)
-
-
-def hash_index(df, hash_keys=None):
-    LOGGER.info(f'hashing indices: {df.shape[0]} files')
-    hash_keys = hash_keys or ['filename', 'st_size']
-    df.index = pd.Index(
-        data=df.apply(lambda row: utils.hash([row[key] for key in hash_keys]), axis=1),
-        name='hash'
-    )
-    return df
+def filter_path(df, exc_list, path_col='path'):
+    return pd.DataFrame(data={folder: df[path_col].apply(str).str.contains(folder, case=False) for folder in exc_list}).any(axis=1)
 
 
 def handle_duplicates(df: pd.DataFrame, func, keys=None):

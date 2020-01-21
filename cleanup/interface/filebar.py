@@ -3,7 +3,7 @@ from tkinter import filedialog, Tk
 import ipywidgets as widgets
 import pandas as pd
 import qgrid
-from ipywidgets import Layout as ly
+from ipywidgets import Layout as LO
 
 from . import layouts
 
@@ -13,20 +13,20 @@ class FileBar(widgets.HBox):
         children = [
             widgets.Button(
                 description=button_text,
-                layout=ly(
+                layout=LO(
                     display='flex',
                     flex='0 1 85px'
                 )
             ),
             widgets.Text(
-                layout=ly(
+                layout=LO(
                     display='flex',
                     flex='1 1 auto'
                 )
             ),
             widgets.Button(
                 description='Browse',
-                layout=ly(
+                layout=LO(
                     display='flex',
                     flex='0 1 65px'
                 )
@@ -52,19 +52,23 @@ class LoadBar(FileBar):
         root = Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', True)
-        file = filedialog.askopenfilename(initialdir = "./", title = "Select file", multiple=False)
+        file = filedialog.askopenfilename(
+            initialdir="./",
+            title="Select file",
+            multiple=False
+        )
         self.children[1].value = str(file)
         root.destroy()
 
     def load_file(self, *args):
         try:
             df = pd.read_pickle(self.children[1].value)
-        except Exception as e:
-            self.print(f'Failed to read')
+        except Exception:
+            raise ValueError(f'failed to read from: {self.children[1].value}')
         else:
-            self.print(f'Read {df.shape[0]} lines')
-        df.index = pd.RangeIndex(stop=df.shape[0], name='guid')
-        return df
+            self.print(f'Read {df.shape[0]} lines, {df.shape[1]} columns')
+            df.index = pd.RangeIndex(stop=df.shape[0], name='guid')
+            return df
 
     def print(self, s):
         if hasattr(self, 'output'):
@@ -96,6 +100,10 @@ class SaveBar(FileBar):
         root = Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', True)
-        file = filedialog.asksaveasfilename(initialdir = "./", title = "Select file", filetypes = (("pickle files","*.pkl"),("all files","*.*")))
+        file = filedialog.asksaveasfilename(
+            initialdir="./",
+            title="Select file",
+            filetypes=(("pickle files", "*.pkl"), ("all files", "*.*"))
+        )
         self.children[1].value = str(file)
         root.destroy()

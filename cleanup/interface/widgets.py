@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import ipywidgets as widgets
 import numpy as np
 import pandas as pd
@@ -16,18 +18,26 @@ class DupInterface:
     def from_yaml(yaml_path):
         with open(yaml_path, 'r') as file:
             cfg = yaml.load(file, Loader=yaml.SafeLoader)
-        return DupInterface(
-                pd.DataFrame(),
-                qgrid_opts=cfg.get('qgrid', {}),
-                default_columns=cfg.get('default_columns', None),
-                dup_pre_sel=cfg.get('default_duplicates', None),
-                exclude_folders=cfg['exclude_folders'],
-                include_ext=cfg['ext']
+        interface = DupInterface(
+            pd.DataFrame(),
+            exclude_folders=cfg['exclude_folders'],
+            include_ext=cfg['ext'],
+            qgrid_opts=cfg.get('qgrid', {}),
+            default_columns=cfg.get('default_columns', None),
+            dup_pre_sel=cfg.get('default_duplicates', None),
         )
+
+        if 'df' in cfg:
+            p = Path(cfg['df'])
+            if Path.cwd() in p.parents:
+                p = p.relative_to(Path.cwd())
+            interface.loader.children[1].value = str(p)
+
+        return interface
 
     def __init__(
             self,
-            df:pd.DataFrame = None,
+            df: pd.DataFrame = None,
             qgrid_opts=None,
             exclude_folders=None,
             include_ext=None,
@@ -94,7 +104,7 @@ class DupInterface:
         )
 
     def main_select(self, *args):
-        with self.output as out:
+        with self.output:
             clear_output()
             dup_cols = self.dup_bar.cols
 
@@ -130,60 +140,88 @@ class DupInterface:
             if kwargs.get('clear', True):
                 clear_output()
 
-            print(f'Rendering')
+            print(f' Rendering '.center(20, '-'))
             if not hasattr(self, '_df'):
                 print('No DataFrame loaded')
                 return
 
-            self.mask = pd.Series(np.ones(self._df.shape[0], dtype=bool), index=pd.RangeIndex(stop=self._df.shape[0]))
+            mask = pd.Series(np.ones(self._df.shape[0], dtype=bool), index=pd.RangeIndex(stop=self._df.shape[0]))
 
-            if hasattr(self, 'exclude_section') and self.exclude_section.children[0].children[0].value:
-                exclude_folders = list(self.exclude_section.children[0].children[-1].value)
-                print(f'Excluding folders')
-                for f in exclude_folders:
-                    print(f' - {f}')
+            w = 10
+            ext_mask = self.mask_include_ext()
+            if ext_mask is not None:
+                # print(f'Including ext\n+{ext_mask.sum()} files')
+                f = f'+{ext_mask.sum()}'.ljust(w)
+                print(f'{f}extensions')
+                mask &= ext_mask
 
-                exf_mask = pd.DataFrame(
-                    {folder: self._df['path'].apply(str).str.contains(folder, case=False) for folder in
-                     exclude_folders}).any(axis=1)
-                self.mask &= ~exf_mask
+            exf_mask = self.mask_exclude_folders()
+            if exf_mask is not None:
+                # print(f'Exclude folders\n-{exf_mask.sum()} files')
+                f = f'-{exf_mask.sum()}'.ljust(w)
+                print(f'{f}folders')
+                mask &= ~exf_mask
 
-            if hasattr(self, 'exclude_section') and self.exclude_section.children[1].children[0].value:
-                include_ext = list(self.exclude_section.children[1].children[-1].value)
-                print(f'Including ext')
-                for e in include_ext:
-                    print(f' - {e}')
+            self.dup_bar.total = mask.sum()
 
-                ext_mask = pd.DataFrame(
-                    {ext: self._df['filename'].str.contains(ext, case=False) for ext in include_ext}
-                ).any(axis=1)
-                self.mask &= ext_mask
+            msg = {
+                -1: 'keep all',
+                0: 'drop all',
+                'first': 'keep first',
+                'last': 'keep last'
+            }
+            dup_mask = self.mask_duplicates()
+            if dup_mask is not None:
+                mask &= ~dup_mask
+                self.dup_bar.dropped = dup_mask.sum()
+                print(('-' + str(dup_mask.sum())).ljust(w) + msg[self.dup_bar.keep])
 
-            self.dup_bar.total = self._df[self.mask].shape[0]
-            if hasattr(self, 'dup_bar'):
-                msg = {
-                    -1: 'Keep all files',
-                    0: 'Drop all duplicates',
-                    'first': 'Keep first of duplicates',
-                    'last': 'Keep last of duplicates'
-                }
-                print(f'{msg[self.dup_bar.keep]}')
-                if self.dup_bar.keep != -1:
-                    dups = self._df.duplicated(self.dup_bar.cols, keep=self.dup_bar.keep)
-                    self.mask &= ~dups
+            for c in self._cols:
+                if c not in self._df.columns:
+                    self._cols.pop(self._cols.index(c))
+                    print(f'Missing column: {c}')
 
-                    self.dup_bar.dropped = self._df[dups].shape[0]
+            self.dup_bar.remaining = mask.sum()
+            print('-' * int(w / 2))
+            print(str(mask.sum()).ljust(w) + 'remaining')
 
-            try:
-                res = self._df[self.mask][self._cols]
-            except KeyError as e:
-                print(f'{repr(e)}')
-                for c in self._df:
-                    print(f'  {c}')
-                return
-            else:
-                self.dup_bar.remaining = res.shape[0]
-                self.qg.df = res
+            res = self._df[mask][self._cols]
+            self.qg.df = res
+
+    @property
+    def exclude_folders(self):
+        return list(self.exclude_section.children[0].children[-1].value)
+
+    def mask_exclude_folders(self):
+        self._mask_exf = pd.DataFrame(
+            {
+                folder: self._df['path'].apply(str).str.contains(folder, case=False)
+                for folder in self.exclude_folders
+            }
+        ).any(axis=1)
+        if self.exclude_section.children[0].children[0].value:
+            return self._mask_exf
+
+    @property
+    def include_ext(self):
+        return list(self.exclude_section.children[1].children[-1].value)
+
+    def mask_include_ext(self):
+        self._mask_ext = pd.DataFrame(
+            {
+                ext: self._df['path'].apply(lambda p: p.suffix) == ext
+                for ext in self.include_ext
+            }
+        ).any(axis=1)
+        if self.exclude_section.children[1].children[0].value:
+            return self._mask_ext
+
+    def mask_duplicates(self):
+        if self.dup_bar.keep != -1:
+            self._mask_dups = self._df.duplicated(self.dup_bar.cols, keep=self.dup_bar.keep)
+        else:
+            self._mask_dups = pd.Series(np.zeros(self._df.shape[0]), dtype=bool, index=self._df.index)
+        return self._mask_dups
 
 
 if __name__ == '__main__':

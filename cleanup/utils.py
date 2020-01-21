@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import re
 from datetime import datetime
@@ -20,25 +19,14 @@ def get_unique_filename(path: Path) -> Path:
 
 def remove_empty_dirs(base):
     to_remove = []
-    for dir in base.glob('**\*'):
-        if dir.is_dir():
-            contents = [p for p in dir.iterdir()]
+    for folder in base.glob('**\*'):
+        if folder.is_dir():
+            contents = [p for p in folder.iterdir()]
             if len(contents) == 0:
-                to_remove.append(dir)
+                to_remove.append(folder)
     for d in to_remove:
         d.rmdir()
 
-
-def hash(input):
-    m = hashlib.md5()
-    if not isinstance(input, list):
-        input = [input]
-    for info in input:
-        if isinstance(info, str):
-            m.update(bytes(info, encoding='UTF-8', errors='strict'))
-        else:
-            m.update(bytes(info))
-    return m.hexdigest()
 
 date_regex = re.compile(
     '(?P<year>(19|20)\d{2})'    # year
@@ -47,6 +35,8 @@ date_regex = re.compile(
     '([- _]?'                   # delimter between month and day
     '(?P<day>\d{2}))?'          # day (optional)
 )
+
+
 def scan_date(path):
     m = date_regex.search(str(path))
     try:
@@ -59,14 +49,15 @@ def scan_date(path):
                 day += 1
             if ((1950 <= year <= 2050) and
                 (1 <= month <= 12) and
-                (1 <= day <= 31)):
+                    (1 <= day <= 31)):
                 return datetime(
                     year=year,
                     month=month,
                     day=day
                 )
-    except Exception as e:
+    except Exception:
         pass
+
 
 def dfs_to_file(df_list, file):
     with Path(file).open('w') as f:
