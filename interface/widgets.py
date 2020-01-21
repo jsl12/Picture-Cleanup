@@ -2,6 +2,7 @@ import ipywidgets as widgets
 import numpy as np
 import pandas as pd
 import qgrid
+import yaml
 from IPython.display import clear_output
 
 from . import layouts
@@ -11,6 +12,19 @@ from .filebar import LoadBar, SaveBar
 
 
 class DupInterface:
+    @staticmethod
+    def from_yaml(yaml_path):
+        with open(yaml_path, 'r') as file:
+            cfg = yaml.load(file, Loader=yaml.SafeLoader)
+        return DupInterface(
+                pd.DataFrame(),
+                qgrid_opts=cfg.get('qgrid', {}),
+                default_columns=cfg.get('default_columns', None),
+                dup_pre_sel=cfg.get('default_duplicates', None),
+                exclude_folders=cfg['exclude_folders'],
+                include_ext=cfg['ext']
+        )
+
     def __init__(
             self,
             df:pd.DataFrame = None,
@@ -160,10 +174,16 @@ class DupInterface:
 
                     self.dup_bar.dropped = self._df[dups].shape[0]
 
-
-            res = self._df[self.mask][self._cols]
-            self.dup_bar.remaining = res.shape[0]
-            self.qg.df = res
+            try:
+                res = self._df[self.mask][self._cols]
+            except KeyError as e:
+                print(f'{repr(e)}')
+                for c in self._df:
+                    print(f'  {c}')
+                return
+            else:
+                self.dup_bar.remaining = res.shape[0]
+                self.qg.df = res
 
 
 if __name__ == '__main__':

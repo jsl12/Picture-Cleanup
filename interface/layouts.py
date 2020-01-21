@@ -30,7 +30,8 @@ opts_bar = ly(
 output = ly(
     display='flex',
     # flex='1 1 0%',
-    width='250px'
+    width='250px',
+    overflow_y='scroll'
     # border='solid 1px green'
 )
 
