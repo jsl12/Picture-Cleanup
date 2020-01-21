@@ -152,21 +152,21 @@ class DupInterface:
             if ext_mask is not None:
                 # print(f'Including ext\n+{ext_mask.sum()} files')
                 f = f'+{ext_mask.sum()}'.ljust(w)
-                print(f'{f}extensions')
+                print(f'{f}matched extensions')
                 mask &= ext_mask
 
             exf_mask = self.mask_exclude_folders()
             if exf_mask is not None:
                 # print(f'Exclude folders\n-{exf_mask.sum()} files')
                 f = f'-{exf_mask.sum()}'.ljust(w)
-                print(f'{f}folders')
+                print(f'{f}excluded folders')
                 mask &= ~exf_mask
 
             self.dup_bar.total = mask.sum()
 
             msg = {
-                -1: 'keep all',
-                0: 'drop all',
+                -1: 'keep all dups',
+                0: 'drop all dups',
                 'first': 'keep first',
                 'last': 'keep last'
             }
