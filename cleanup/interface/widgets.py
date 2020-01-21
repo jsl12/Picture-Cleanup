@@ -21,7 +21,7 @@ class DupInterface:
         interface = DupInterface(
             pd.DataFrame(),
             exclude_folders=cfg['exclude_folders'],
-            include_ext=cfg['ext'],
+            include_ext=cfg['include_ext'],
             qgrid_opts=cfg.get('qgrid', {}),
             default_columns=cfg.get('default_columns', None),
             dup_pre_sel=cfg.get('default_duplicates', None),
