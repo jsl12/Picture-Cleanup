@@ -48,15 +48,19 @@ class SizeSorter:
     def duplicated(self):
         return self.df[self.mask_d]
 
-    def mark_unique(self, mask, name=None):
-        if name is not None:
-            self.save_mask(mask, name)
-        self.mask_u.loc[mask.index] |= mask
+    def mark_unique(self, input_mask, name=None):
+        self.mark_mask(input_mask, 'mask_u', save_name=name)
+        self.save_mask(input_mask, 'mask_u')
 
-    def mark_duplicate(self, mask, name=None):
-        if name is not None:
-            self.save_mask(mask, name)
-        self.mask_d.loc[mask.index] |= mask
+    def mark_duplicate(self, input_mask, name=None):
+        self.mark_mask(input_mask, 'mask_d', save_name=name)
+        self.save_mask(input_mask, 'mask_d')
+
+    def mark_mask(self, input_mask, mask_name, save_name=None):
+        if save_name is not None:
+            self.save_mask(input_mask, save_name)
+        if hasattr(self, mask_name):
+            getattr(self, mask_name)[input_mask.index] |= input_mask
 
     def save_mask(self, mask: pd.Series, name:str):
         if name not in self.df:
@@ -70,7 +74,7 @@ class SizeSorter:
         self.unique_size = ~self.df.duplicated(size_col, keep=False)
         self.mark_unique(self.unique_size, 'unique size')
 
-        self.df[~self.mask_u].groupby(size_col).apply(self.process_group, **kwargs)
+        self.df[~self.mask_u].groupby(size_col).apply(getattr(self, 'process_group'), **kwargs)
 
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.duplicated.shape[0]}')
