@@ -89,7 +89,7 @@ class SizeSorter:
         print('Duplicated'.ljust(self.w) + f'{self.duplicated.shape[0]}')
 
     def process_group(self, df: pd.DataFrame, path_col='path', **kwargs):
-        self.w2 = 10
+        # self.w2 = 10
         # print('Dup group'.ljust(self.w) + f'{df.shape[0]}'.ljust(self.w2) + f'{df.index[0]}')
 
         # find unique extensions and mark them as unique overall
@@ -103,7 +103,39 @@ class SizeSorter:
         # mark the unique transformed filenames as unique overall
         unique_transformed = ~transformed.duplicated(keep=False)
         self.mark_unique(unique_transformed, 'unique transformed filename')
-        self.mark_duplicate(~unique_transformed, 'dup size/ext')
+        remaining = ~unique_transformed
+
+        if remaining.sum() > 0:
+            lengths = df['path'].apply(lambda p: len(p.stem))
+            shortest_length = lengths.min()
+            shortest = lengths == shortest_length
+            if df[shortest].shape[0] == 1:
+                self.mark_unique(pd.Series([True], index=shortest.index[shortest]), 'shortest filename')
+                self.mark_duplicate(
+                    pd.Series(
+                        np.ones(df[~shortest].shape[0]),
+                        dtype=bool
+                    ),
+                    'longer filename'
+                )
+            else:
+                sorted_filenames = df.sort_values('filename')
+                self.mark_unique(
+                    pd.Series(
+                        [True],
+                        index=sorted_filenames.index[0]
+                    ),
+                    'first filename'
+                )
+                self.mark_duplicate(
+                    pd.Series(
+                        np.ones(len(sorted_filenames.index[1:]), dtype=bool),
+                        index=sorted_filenames.index[1:]
+                    ),
+                    'not first sorted filename'
+                )
+        else:
+            pass
         return df
 
     @staticmethod
