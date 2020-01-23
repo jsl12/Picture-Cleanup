@@ -69,7 +69,7 @@ class SizeSorter:
         if save_name is not None:
             self.save_mask(input_mask, save_name)
         if hasattr(self, mask_name):
-            getattr(self, mask_name)[input_mask.index] |= input_mask
+            getattr(self, mask_name)[input_mask.index] = input_mask
 
     def save_mask(self, mask: pd.Series, name:str):
         if name not in self.df:
@@ -97,13 +97,13 @@ class SizeSorter:
         self.mark_unique(unique_ext, 'unique size/ext combo')
 
         # take the remaining rows and transform the filenames
-        remaining = df[~unique_ext]
-        transformed = remaining[path_col].apply(self.transform_filename)
+        remaining = ~unique_ext
+        transformed = df[remaining][path_col].apply(self.transform_filename)
 
         # mark the unique transformed filenames as unique overall
-        unique_filenames = ~transformed.duplicated(keep=False)
-        self.mark_unique(unique_filenames, 'unique transformed filename')
-        self.mark_duplicate(~unique_ext, 'dup size/ext')
+        unique_transformed = ~transformed.duplicated(keep=False)
+        self.mark_unique(unique_transformed, 'unique transformed filename')
+        self.mark_duplicate(~unique_transformed, 'dup size/ext')
         return df
 
     @staticmethod
