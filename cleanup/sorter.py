@@ -29,7 +29,10 @@ class SizeSorter:
             inc = utils.filter_extension(df, cfg['include_ext'])
             print(f'Including {inc.sum()} files because of extensions')
 
-        return SizeSorter(df[inc & ~exc], yaml_path=yaml_path)
+        if 'filesize_min' in cfg:
+            size = df['st_size'] >= cfg['filesize_min']
+
+        return SizeSorter(df[inc & ~exc & size], yaml_path=yaml_path)
 
     def __init__(self, df: pd.DataFrame, yaml_path=None):
         self.df = df.copy()
