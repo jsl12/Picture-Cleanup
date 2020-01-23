@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from .df import utils
+from .df import utils, clean
 from .interface.grid import grid_from_yaml
 
 
@@ -83,60 +83,57 @@ class SizeSorter:
         self.unique_size = ~self.df.duplicated(size_col, keep=False)
         self.mark_unique(self.unique_size, 'unique size')
 
-        self.df[~self.mask_u].groupby(size_col).apply(getattr(self, 'process_group'), **kwargs)
+        self.df[~self.mask_u].groupby(size_col).apply(self.process_size_group, **kwargs)
 
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.duplicated.shape[0]}')
 
-    def process_group(self, df: pd.DataFrame, path_col='path', **kwargs):
-        # self.w2 = 10
-        # print('Dup group'.ljust(self.w) + f'{df.shape[0]}'.ljust(self.w2) + f'{df.index[0]}')
+    def process_size_group(self, df: pd.DataFrame, path_col='path', **kwargs):
+        df['suffix'] = df[path_col].apply(lambda p: p.suffix.upper())
 
         # find unique extensions and mark them as unique overall
-        unique_ext = ~df[path_col].apply(lambda p: p.suffix).duplicated(keep=False)
+        unique_ext = ~df.duplicated('suffix', keep=False)
         self.mark_unique(unique_ext, 'unique size/ext combo')
 
-        # take the remaining rows and transform the filenames
         remaining = ~unique_ext
-        transformed = df[remaining][path_col].apply(self.transform_filename)
-
-        # mark the unique transformed filenames as unique overall
-        unique_transformed = ~transformed.duplicated(keep=False)
-        self.mark_unique(unique_transformed, 'unique transformed filename')
-        remaining = ~unique_transformed
+        df = df[remaining]
 
         if remaining.sum() > 0:
-            lengths = df['path'].apply(lambda p: len(p.stem))
-            shortest_length = lengths.min()
-            shortest = lengths == shortest_length
-            if df[shortest].shape[0] == 1:
-                self.mark_unique(pd.Series([True], index=shortest.index[shortest]), 'shortest filename')
-                self.mark_duplicate(
-                    pd.Series(
-                        np.ones(df[~shortest].shape[0]),
-                        dtype=bool
-                    ),
-                    'longer filename'
-                )
-            else:
-                sorted_filenames = df.sort_values('filename')
-                self.mark_unique(
-                    pd.Series(
-                        [True],
-                        index=sorted_filenames.index[0]
-                    ),
-                    'first filename'
-                )
-                self.mark_duplicate(
-                    pd.Series(
-                        np.ones(len(sorted_filenames.index[1:]), dtype=bool),
-                        index=sorted_filenames.index[1:]
-                    ),
-                    'not first sorted filename'
-                )
-        else:
-            pass
-        return df
+            df['shortname'] = df['path'].apply(self.transform_filename)
+            unique_shortname = ~df.duplicated('shortname', keep=False)
+            self.mark_unique(unique_shortname, 'unique shortname')
+
+            remaining = ~unique_shortname
+            df = df[remaining]
+
+            if remaining.sum() > 0:
+                df.groupby('shortname').apply(self.process_short_names, **kwargs)
+
+    def process_short_names(self, df: pd.DataFrame, path_col='path', **kwargs):
+        df['EXIF DateTimeOriginal'] = clean.convert_ifdtag(df['EXIF DateTimeOriginal'])
+        unique_exifdate = ~df.duplicated('EXIF DateTimeOriginal', keep=False)
+        self.mark_unique(unique_exifdate, 'unique exif date')
+
+        remaining = ~unique_exifdate
+        df = df[remaining]
+
+        if remaining.sum() > 0:
+            df = df.sort_values('filename')
+            self.mark_unique(
+                pd.Series(
+                    [True],
+                    index=[df.index[0]]
+                ),
+                'first filename'
+            )
+            self.mark_duplicate(
+                pd.Series(
+                    np.ones(len(df.index[1:]), dtype=bool),
+                    index=df.index[1:]
+                ),
+                'not first filename'
+            )
+
 
     @staticmethod
     def transform_filename(path: Path) -> str:
