@@ -21,18 +21,24 @@ class SizeSorter:
         if 'default_columns' in cfg:
             df = df[cfg['default_columns']]
 
+        mask = pd.Series(np.ones(df.shape[0], dtype=bool))
+
         if 'exclude_folders' in cfg:
             exc = utils.filter_path(df, cfg['exclude_folders'])
             print(f'Skipping {exc.sum()} files for excluded folders')
+            mask &= ~exc
 
         if 'include_ext' in cfg:
             inc = utils.filter_extension(df, cfg['include_ext'])
             print(f'Including {inc.sum()} files because of extensions')
+            mask &= inc
 
         if 'filesize_min' in cfg:
             size = df['st_size'] >= cfg['filesize_min']
+            print(f'Skipping {(~size).sum()} files because of size')
+            mask &= size
 
-        return SizeSorter(df[inc & ~exc & size], yaml_path=yaml_path)
+        return SizeSorter(df[mask], yaml_path=yaml_path)
 
     def __init__(self, df: pd.DataFrame, yaml_path=None):
         self.df = df.copy()
