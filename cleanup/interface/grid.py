@@ -18,7 +18,7 @@ def grid_from_yaml(yaml_path, df: pd.DataFrame = None):
     if 'default_columns' in cfg:
         df = df[cfg['default_columns']]
 
-    mask = pd.Series(np.ones(df.shape[0], dtype=bool))
+    mask = pd.Series(np.ones(df.shape[0], dtype=bool), index=df.index)
 
     if 'exclude_folders' in cfg:
         exc = utils.filter_path(df, cfg['exclude_folders'])

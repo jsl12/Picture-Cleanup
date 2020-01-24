@@ -166,6 +166,7 @@ class DupInterface:
             self.dup_bar.total = mask.sum()
 
             msg = {
+                -2: 'keep only dups',
                 -1: 'keep all dups',
                 0: 'drop all dups',
                 'first': 'keep first',
@@ -209,10 +210,12 @@ class DupInterface:
             return self._mask_ext
 
     def mask_duplicates(self):
-        if self.dup_bar.keep != -1:
-            self._mask_dups = self._df.duplicated(self.dup_bar.cols, keep=self.dup_bar.keep)
-        else:
+        if self.dup_bar.keep == -1:
             self._mask_dups = pd.Series(np.zeros(self._df.shape[0]), dtype=bool, index=self._df.index)
+        elif self.dup_bar.keep == -2:
+            self._mask_dups = ~self._df.duplicated(self.dup_bar.cols, keep=False)
+        else:
+            self._mask_dups = self._df.duplicated(self.dup_bar.cols, keep=self.dup_bar.keep)
         return self._mask_dups
 
 

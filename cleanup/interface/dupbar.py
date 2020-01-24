@@ -8,7 +8,7 @@ class DupBar(widgets.HBox):
     def __init__(self, cols, handler=None, default=['st_size'], **kwargs):
         children = [
                widgets.Dropdown(
-                   options={'None': -1, 'First': 'first', 'Last': 'last', 'All': False},
+                   options={'None': -1, 'First': 'first', 'Last': 'last', 'All': False, 'Only': -2},
                    value=-1,
                    layout=ly(
                        display='flex',

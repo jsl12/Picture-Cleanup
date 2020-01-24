@@ -1,10 +1,20 @@
 import logging
 from pathlib import Path
-
+import functools
+import time
 import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
 
+
+def timer(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        res = func(*args, **kwargs)
+        print(f'Finished {func.__name__!r} in {time.perf_counter()-start:.2f}s')
+        return res
+    return wrapper
 
 def get_unique_filename(path: Path) -> Path:
     if path.exists():

@@ -7,7 +7,7 @@ import yaml
 
 from .df import utils, clean
 from .interface.grid import grid_from_yaml
-
+from .utils import timer
 
 class SizeSorter:
     @staticmethod
@@ -85,6 +85,7 @@ class SizeSorter:
             self.df[name] = pd.Series(np.zeros(self.df.shape[0], dtype=bool), index=self.df.index)
         self.df.loc[mask.index, name] = mask
 
+    @timer
     def flat_process(self, keys=['st_size', 'suffix', 'shortname']):
         self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
         self.df['shortname'] = self.df['path'].apply(self.transform_filename)
@@ -95,10 +96,14 @@ class SizeSorter:
             if not lengths.duplicated(keep=False).all():
                 res = lengths.idxmin()
             else:
-                group = group.sort_values('filename', ascending=True)
+                group = group.sort_values(['filename', 'pathdate'], ascending=True)
                 res = group.index[0]
             un, dup = self.mark_single_unique(group.index, res)
+        print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
+        print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')
+        self.df['mask_d'] = self.mask_d
 
+    @timer
     def process(self):
         print('Processing'.ljust(self.w) + f'{self.df.shape[0]}')
         self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
@@ -134,7 +139,7 @@ class SizeSorter:
                             self.mark_single_unique(lengths.index, lengths.idxmin())
 
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
-        print('Duplicated'.ljust(self.w) + f'{self.duplicated.shape[0]}')
+        print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')
         self.df['mask_d'] = self.mask_d
 
     @staticmethod
