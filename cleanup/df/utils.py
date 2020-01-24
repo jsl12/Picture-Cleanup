@@ -6,8 +6,20 @@ from typing import List
 
 import exifread
 import pandas as pd
+import yaml
+
+from ..utils import timer
 
 LOGGER = logging.getLogger(__name__)
+
+@timer
+def load_yaml(yaml_path):
+    with Path(yaml_path).open('r') as file:
+        cfg = yaml.load(file, Loader=yaml.SafeLoader)
+    df_path = Path(cfg['df'])
+    print(f'Loading {df_path.stat().st_size / (10 ** 6):.2f} MB...')
+    df = pd.read_pickle(df_path)
+    print(f'Loaded {df.shape[0]} rows')
 
 
 def read_os_stats(path: Path):
