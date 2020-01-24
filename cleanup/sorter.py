@@ -46,6 +46,8 @@ class SizeSorter:
         self.mask_u = pd.Series(np.zeros(df.shape[0], dtype=bool), index=self.df.index)
         self.mask_d = self.mask_u.copy()
 
+        self.w = 20
+
         if yaml_path is not None:
             self.yaml_path = yaml_path
 
@@ -56,6 +58,13 @@ class SizeSorter:
     @property
     def duplicated(self):
         return self.df[self.mask_d]
+
+    def mark_single_unique(self, index, unique_iloc):
+        res = pd.Series(np.zeros(index.shape[0], dtype=bool), index=index)
+        res.loc[unique_iloc] = True
+        self.mark_unique(res, 'end tree')
+        self.mark_duplicate(~res, 'end tree dup')
+        return res, ~res
 
     def mark_unique(self, input_mask, name=None):
         self.mark_mask(input_mask, 'mask_u', save_name=name)
@@ -76,8 +85,21 @@ class SizeSorter:
             self.df[name] = pd.Series(np.zeros(self.df.shape[0], dtype=bool), index=self.df.index)
         self.df.loc[mask.index, name] = mask
 
-    def process(self, size_col='st_size', **kwargs):
-        self.w = 20
+    def flat_process(self, keys=['st_size', 'suffix', 'shortname']):
+        self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
+        self.df['shortname'] = self.df['path'].apply(self.transform_filename)
+        big_dup = self.df.duplicated(keys, keep=False)
+        self.mark_unique(~big_dup, 'not big dups')
+        for idx, group in self.df[big_dup].groupby(keys):
+            lengths = group['filename'].apply(len)
+            if not lengths.duplicated(keep=False).all():
+                res = lengths.idxmin()
+            else:
+                group = group.sort_values('filename', ascending=True)
+                res = group.index[0]
+            un, dup = self.mark_single_unique(group.index, res)
+
+    def process(self):
         print('Processing'.ljust(self.w) + f'{self.df.shape[0]}')
         self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
         self.df['shortname'] = self.df['path'].apply(self.transform_filename)
@@ -85,7 +107,7 @@ class SizeSorter:
         col_label = 'unique size'
         self.mark_unique(~self.df.duplicated('st_size', keep=False), col_label)
 
-        print(f'Processing {(~self.mask_u).sum()} files with duplicate file size')
+        print('Duplicate sizes'.ljust(self.w) + f'{(~self.mask_u).sum()}')
         for size, size_group in self.df[~self.mask_u].groupby('st_size'):
             un_size_mask = ~size_group.duplicated('suffix', keep=False)
             col_label = 'unique size/ext'
@@ -107,11 +129,9 @@ class SizeSorter:
                         same_length = lengths.duplicated(keep=False).all()
                         if same_length:
                             df = df.sort_values('pathdate', ascending=True)
-                            self.mask_u.loc[df.index[0]] = True
-                            self.mask_d.loc[df.index[1:]] = True
+                            self.mark_single_unique(df.index, df.index[0])
                         else:
-                            self.mask_u.loc[lengths.idxmin()] = True
-                            self.mask_d.loc[df[df.index != lengths.idxmin()].index] = True
+                            self.mark_single_unique(lengths.index, lengths.idxmin())
 
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.duplicated.shape[0]}')

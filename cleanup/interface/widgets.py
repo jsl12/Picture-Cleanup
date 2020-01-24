@@ -186,6 +186,7 @@ class DupInterface:
             print('-' * int(w / 2))
             print(str(mask.sum()).ljust(w) + 'remaining')
 
+            self._mask = mask
             res = self._df[mask][self._cols]
             self.qg.df = res
 
