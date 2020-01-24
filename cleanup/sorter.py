@@ -79,61 +79,43 @@ class SizeSorter:
     def process(self, size_col='st_size', **kwargs):
         self.w = 20
         print('Processing'.ljust(self.w) + f'{self.df.shape[0]}')
+        self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
+        self.df['shortname'] = self.df['path'].apply(self.transform_filename)
 
-        self.unique_size = ~self.df.duplicated(size_col, keep=False)
-        self.mark_unique(self.unique_size, 'unique size')
+        col_label = 'unique size'
+        self.mark_unique(~self.df.duplicated('st_size', keep=False), col_label)
 
-        self.df[~self.mask_u].groupby(size_col).apply(self.process_size_group, **kwargs)
+        print(f'Processing {(~self.mask_u).sum()} files with duplicate file size')
+        for size, size_group in self.df[~self.mask_u].groupby('st_size'):
+            un_size_mask = ~size_group.duplicated('suffix', keep=False)
+            col_label = 'unique size/ext'
+            self.mark_unique(un_size_mask, col_label)
+
+            for suffix, suffix_group in size_group[~un_size_mask].groupby('suffix'):
+                un_shortname_mask = ~suffix_group.duplicated('shortname', keep=False)
+                col_label = 'unique size/ext/shortname'
+                self.mark_unique(un_shortname_mask, col_label)
+
+                for shortname, shortname_group in suffix_group[~un_shortname_mask].groupby('shortname'):
+                    shortname_group['EXIF DateTimeOriginal'] = clean.convert_ifdtag(shortname_group['EXIF DateTimeOriginal'])
+                    un_date_mask = ~shortname_group.duplicated('EXIF DateTimeOriginal', keep=False)
+                    col_label = 'unique size/ext/shortname/exifdate'
+                    self.mark_unique(un_date_mask, col_label)
+                    if (~un_date_mask).sum() > 0:
+                        df = shortname_group[~un_date_mask]
+                        lengths = df['filename'].apply(len)
+                        same_length = lengths.duplicated(keep=False).all()
+                        if same_length:
+                            df = df.sort_values('pathdate', ascending=True)
+                            self.mask_u.loc[df.index[0]] = True
+                            self.mask_d.loc[df.index[1:]] = True
+                        else:
+                            self.mask_u.loc[lengths.idxmin()] = True
+                            self.mask_d.loc[df[df.index != lengths.idxmin()].index] = True
 
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.duplicated.shape[0]}')
-
-    def process_size_group(self, df: pd.DataFrame, path_col='path', **kwargs):
-        df['suffix'] = df[path_col].apply(lambda p: p.suffix.upper())
-
-        # find unique extensions and mark them as unique overall
-        unique_ext = ~df.duplicated('suffix', keep=False)
-        self.mark_unique(unique_ext, 'unique size/ext combo')
-
-        remaining = ~unique_ext
-        df = df[remaining]
-
-        if remaining.sum() > 0:
-            df['shortname'] = df['path'].apply(self.transform_filename)
-            unique_shortname = ~df.duplicated('shortname', keep=False)
-            self.mark_unique(unique_shortname, 'unique shortname')
-
-            remaining = ~unique_shortname
-            df = df[remaining]
-
-            if remaining.sum() > 0:
-                df.groupby('shortname').apply(self.process_short_names, **kwargs)
-
-    def process_short_names(self, df: pd.DataFrame, path_col='path', **kwargs):
-        df['EXIF DateTimeOriginal'] = clean.convert_ifdtag(df['EXIF DateTimeOriginal'])
-        unique_exifdate = ~df.duplicated('EXIF DateTimeOriginal', keep=False)
-        self.mark_unique(unique_exifdate, 'unique exif date')
-
-        remaining = ~unique_exifdate
-        df = df[remaining]
-
-        if remaining.sum() > 0:
-            df = df.sort_values('filename')
-            self.mark_unique(
-                pd.Series(
-                    [True],
-                    index=[df.index[0]]
-                ),
-                'first filename'
-            )
-            self.mark_duplicate(
-                pd.Series(
-                    np.ones(len(df.index[1:]), dtype=bool),
-                    index=df.index[1:]
-                ),
-                'not first filename'
-            )
-
+        self.df['mask_d'] = self.mask_d
 
     @staticmethod
     def transform_filename(path: Path) -> str:
