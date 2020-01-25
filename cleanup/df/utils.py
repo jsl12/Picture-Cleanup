@@ -37,14 +37,6 @@ def read_exif(path: Path, stop_tag=exifread.DEFAULT_STOP_TAG):
         return {}
 
 
-def filter_extension(df, include_list, path_col='path'):
-    return pd.DataFrame(data={e: df[path_col].apply(lambda p: p.suffix.upper()) == e.upper() for e in include_list}).any(axis=1)
-
-
-def filter_path(df: pd.DataFrame, exclude_list: List[str], path_col: str = 'path') -> pd.Series:
-    return pd.DataFrame(data={folder: df[path_col].apply(str).str.contains(folder, case=False) for folder in exclude_list}).any(axis=1)
-
-
 def scan_pathdate(df, scan_col='path'):
     return df[scan_col].apply(lambda p: scan_date(p) or pd.NaT)
 

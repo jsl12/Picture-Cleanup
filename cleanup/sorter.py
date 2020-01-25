@@ -5,9 +5,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from .df import utils, clean
+from . import utils
 from .interface.grid import grid_from_yaml
-from .utils import timer
 
 class SizeSorter:
     @staticmethod
@@ -16,12 +15,14 @@ class SizeSorter:
             cfg = yaml.load(file, Loader=yaml.SafeLoader)
 
         if df is None:
-            df = pd.read_pickle(cfg['df'])
+            p = Path(cfg['df'])
+            print(f'Reading {p.stat().st_size / (10**6):.2f} MB from {p.name}')
+            df = pd.read_pickle(p)
 
         if 'default_columns' in cfg:
             df = df[cfg['default_columns']]
 
-        mask = pd.Series(np.ones(df.shape[0], dtype=bool))
+        mask = pd.Series(np.ones(df.shape[0], dtype=bool), index=df.index)
 
         if 'exclude_folders' in cfg:
             exc = utils.filter_path(df, cfg['exclude_folders'])
@@ -52,11 +53,11 @@ class SizeSorter:
             self.yaml_path = yaml_path
 
     @property
-    def unique(self):
+    def unique(self) -> pd.DataFrame:
         return self.df[self.mask_u]
 
     @property
-    def duplicated(self):
+    def duplicated(self) -> pd.DataFrame:
         return self.df[self.mask_d]
 
     def mark_single_unique(self, index, unique_iloc):
@@ -85,19 +86,23 @@ class SizeSorter:
             self.df[name] = pd.Series(np.zeros(self.df.shape[0], dtype=bool), index=self.df.index)
         self.df.loc[mask.index, name] = mask
 
-    @timer
+    @utils.timer
     def flat_process(self, keys=['st_size', 'suffix', 'shortname']):
         self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
         self.df['shortname'] = self.df['path'].apply(self.transform_filename)
         big_dup = self.df.duplicated(keys, keep=False)
         self.mark_unique(~big_dup, 'not big dups')
         for idx, group in self.df[big_dup].groupby(keys):
-            lengths = group['filename'].apply(len)
-            if not lengths.duplicated(keep=False).all():
-                res = lengths.idxmin()
+            lr = group['path'].apply(lambda p: 'Lightroom CC' in str(p))
+            if lr.any():
+                res = lr[lr].index[0]
             else:
-                group = group.sort_values(['filename', 'pathdate'], ascending=True)
-                res = group.index[0]
+                lengths = group['filename'].apply(len)
+                if not lengths.duplicated(keep=False).all():
+                    res = lengths.idxmin()
+                else:
+                    group = group.sort_values(['filename', 'pathdate'], ascending=True)
+                    res = group.index[0]
             un, dup = self.mark_single_unique(group.index, res)
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')

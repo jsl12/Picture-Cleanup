@@ -5,16 +5,21 @@ import yaml
 from exifread import IfdTag
 
 
-def convert_ifdtag(col):
-    def conv(val):
-        if pd.isnull(val):
-            return pd.NaT
-        if isinstance(val, IfdTag):
+def convert_datetime(val):
+    if pd.isnull(val):
+        return pd.NaT
+    if isinstance(val, IfdTag):
+        try:
             return datetime.strptime(val.values, '%Y:%m:%d %H:%M:%S')
-        else:
-            return val
+        except ValueError:
+            return pd.NaT
+    elif isinstance(val, pd.Timestamp):
+        return val.to_pydatetime()
+    else:
+        raise ValueError(val)
 
-    return col.apply(conv)
+def convert_ifdtag(col):
+    return col.apply(convert_datetime)
 
 if __name__ == '__main__':
     with open(r'C:\Users\lanca_000\Documents\Software\Python\Picture Cleanup\jsl\jsl.yaml', 'r') as file:

@@ -6,7 +6,8 @@ from types import GeneratorType
 import exifread
 import pandas as pd
 
-from .utils import scan_pathdate, read_os_stats, read_exif, filter_extension, filter_path
+from .utils import scan_pathdate, read_os_stats, read_exif
+from ..utils import filter_path, filter_extension
 
 LOGGER = logging.getLogger(__name__)
 
