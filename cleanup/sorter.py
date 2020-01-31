@@ -93,7 +93,7 @@ class UniqueIDer:
         self.df.loc[mask.index, name] = mask
 
     @utils.timer
-    def process(self, keys=['st_size', 'suffix', 'shortname']):
+    def process(self, keys=['st_size', 'suffix', 'shortname'], *args, **kwargs):
         print(f'Creating suffix column')
         self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
 
@@ -109,20 +109,24 @@ class UniqueIDer:
         grouped = self.df[big_dup].groupby(keys)
         print(f'{grouped.ngroups} groups, {grouped.size().mean():.1f} avg files')
         for idx, group in grouped:
-            lr = group['path'].apply(lambda p: 'Lightroom CC' in str(p))
-            if lr.any():
-                res = lr[lr].index[0]
-            else:
-                lengths = group['filename'].apply(len)
-                if not lengths.duplicated(keep=False).all():
-                    res = lengths.idxmin()
-                else:
-                    group = group.sort_values(['filename', 'pathdate'], ascending=True)
-                    res = group.index[0]
-            un, dup = self.mark_single_unique(group.index, res)
+            res = self.select(group, *args, **kwargs)
+            un, dup = self.mark_single_unique(index=group.index, unique_iloc=res)
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')
         self.df['mask_d'] = self.mask_d
+
+    def select(self, group, priority_keyword=None) -> int:
+        if priority_keyword is not None:
+            lr = group['path'].apply(lambda p: priority_keyword in str(p))
+            if lr.any():
+                return lr[lr].index[0]
+        lengths = group['filename'].apply(len)
+        if not lengths.duplicated(keep=False).all():
+            res = lengths.idxmin()
+        else:
+            group = group.sort_values(['filename', 'pathdate'], ascending=True)
+            res = group.index[0]
+        return res
 
     @staticmethod
     def transform_filename(path: Path) -> str:
