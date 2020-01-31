@@ -8,8 +8,10 @@ import yaml
 from . import utils
 from .interface.grid import grid_from_yaml
 
-class SizeSorter:
+class UniqueIDer:
+    w = 35
     @staticmethod
+    @utils.timer
     def from_yaml(yaml_path, df: pd.DataFrame = None):
         with Path(yaml_path).open('r') as file:
             cfg = yaml.load(file, Loader=yaml.SafeLoader)
@@ -25,29 +27,33 @@ class SizeSorter:
         mask = pd.Series(np.ones(df.shape[0], dtype=bool), index=df.index)
 
         if 'exclude_folders' in cfg:
+            print(f'Processing folder exclusions'.ljust(UniqueIDer.w), end='')
             exc = utils.filter_path(df, cfg['exclude_folders'])
-            print(f'Skipping {exc.sum()} files for excluded folders')
+            print(f'{exc.sum()} files')
             mask &= ~exc
 
         if 'include_ext' in cfg:
+            print(f'Processing file extensions'.ljust(UniqueIDer.w), end='')
             inc = utils.filter_extension(df, cfg['include_ext'])
-            print(f'Including {inc.sum()} files because of extensions')
+            print(f'{inc.sum()} files')
             mask &= inc
 
         if 'filesize_min' in cfg:
+            print(f'Processing file sizes'.ljust(UniqueIDer.w), end='')
             size = df['st_size'] >= cfg['filesize_min']
-            print(f'Skipping {(~size).sum()} files because of size')
+            print(f'{(~size).sum()} files')
             mask &= size
 
-        return SizeSorter(df[mask], yaml_path=yaml_path)
+        res = df[mask]
+        print('-' * UniqueIDer.w)
+        print(f'Total files'.ljust(UniqueIDer.w) + f'{res.shape[0]} files')
+        return UniqueIDer(res, yaml_path=yaml_path)
 
     def __init__(self, df: pd.DataFrame, yaml_path=None):
         self.df = df.copy()
         self.df.index = pd.RangeIndex(stop=df.shape[0])
         self.mask_u = pd.Series(np.zeros(df.shape[0], dtype=bool), index=self.df.index)
         self.mask_d = self.mask_u.copy()
-
-        self.w = 20
 
         if yaml_path is not None:
             self.yaml_path = yaml_path
@@ -87,12 +93,22 @@ class SizeSorter:
         self.df.loc[mask.index, name] = mask
 
     @utils.timer
-    def flat_process(self, keys=['st_size', 'suffix', 'shortname']):
+    def process(self, keys=['st_size', 'suffix', 'shortname']):
+        print(f'Creating suffix column')
         self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
+
+        print('Creating shortname column')
         self.df['shortname'] = self.df['path'].apply(self.transform_filename)
+
+        print('Calculating duplicates'.ljust(self.w), end='')
         big_dup = self.df.duplicated(keys, keep=False)
         self.mark_unique(~big_dup, 'not big dups')
-        for idx, group in self.df[big_dup].groupby(keys):
+        print(f'{(~big_dup).sum()} unique, {big_dup.sum()} duplicate')
+
+        print(f'Processing groups of duplicates'.ljust(self.w), end='')
+        grouped = self.df[big_dup].groupby(keys)
+        print(f'{grouped.ngroups} groups, {grouped.size().mean():.1f} avg files')
+        for idx, group in grouped:
             lr = group['path'].apply(lambda p: 'Lightroom CC' in str(p))
             if lr.any():
                 res = lr[lr].index[0]

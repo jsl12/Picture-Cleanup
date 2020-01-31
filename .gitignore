@@ -4,4 +4,4 @@ temp*
 .idea
 jsl*
 *.egg*
-*.ipynb*
+.ipynb_checkpoints

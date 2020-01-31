@@ -1,6 +1,7 @@
 import functools
 import logging
 import time
+from datetime import timedelta
 from pathlib import Path
 from typing import List
 
@@ -17,7 +18,7 @@ def timer(func):
     def wrapper(*args, **kwargs):
         start = time.perf_counter()
         res = func(*args, **kwargs)
-        print(f'Finished {func.__name__!r} in {time.perf_counter()-start:.2f}s')
+        print(f'Finished {func.__name__!r} in {timedelta(seconds=time.perf_counter() - start)}')
         return res
     return wrapper
 
@@ -100,7 +101,9 @@ def gen_result_df(result_source, target_folder=None, exclude_path=None, include_
     if isinstance(result_source, str):
         result_source = Path(result_source)
 
-    if isinstance(result_source, Path) and result_source.is_dir():
+    if isinstance(result_source, pd.DataFrame):
+        df = result_source
+    elif isinstance(result_source, Path) and result_source.is_dir():
         df = pd.concat([
             pd.read_pickle(f) for f in result_source.glob('*.pkl')
         ], sort=False)
@@ -108,7 +111,6 @@ def gen_result_df(result_source, target_folder=None, exclude_path=None, include_
         df = pd.read_pickle(result_source)
     else:
         raise ValueError(result_source)
-
     df.index = pd.RangeIndex(stop=df.shape[0])
 
     mask = pd.Series(np.ones(df.shape[0], dtype=bool), index=df.index)
@@ -118,13 +120,15 @@ def gen_result_df(result_source, target_folder=None, exclude_path=None, include_
         mask &= ~mask_exclude_folders
 
     if include_suffix is not None:
-        mask_include_suffix = filter_extension(df=df, include_list=[include_suffix] if not isinstance(include_suffix,
-                                                                                            list) else include_suffix)
+        mask_include_suffix = filter_extension(df=df, include_list=[include_suffix] if not isinstance(include_suffix, list) else include_suffix)
         mask &= mask_include_suffix
 
     df = df[mask]
 
     df['pathdate'] = df.apply(select_date, axis=1)
+
+    if target_folder is None:
+        target_folder = Path.cwd()
     df['target'] = df.apply(lambda row: Path(target_folder) / gen_target_path(row) / row['path'].name, axis=1)
 
     res = pd.DataFrame(

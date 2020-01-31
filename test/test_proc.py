@@ -7,7 +7,7 @@ class ProcTest(unittest.TestCase):
         self.df = pd.read_pickle(r'test.pkl')
 
     def test_proc(self):
-        s = sorter.SizeSorter(self.df)
+        s = sorter.UniqueIDer(self.df)
         s.process()
         return
 
