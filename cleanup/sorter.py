@@ -66,9 +66,9 @@ class UniqueIDer:
     def duplicated(self) -> pd.DataFrame:
         return self.df[self.mask_d]
 
-    def mark_single_unique(self, index, unique_iloc):
+    def mark_single_unique(self, index, unique_loc):
         res = pd.Series(np.zeros(index.shape[0], dtype=bool), index=index)
-        res.loc[unique_iloc] = True
+        res.loc[unique_loc] = True
         self.mark_unique(res, 'end tree')
         self.mark_duplicate(~res, 'end tree dup')
         return res, ~res
@@ -110,9 +110,11 @@ class UniqueIDer:
         print(f'{grouped.ngroups} groups, {grouped.size().mean():.1f} avg files')
         for idx, group in grouped:
             res = self.select(group, *args, **kwargs)
-            un, dup = self.mark_single_unique(index=group.index, unique_iloc=res)
+            un, dup = self.mark_single_unique(index=group.index, unique_loc=res)
+
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')
+
         self.df['mask_d'] = self.mask_d
 
     def select(self, group, priority_keyword=None) -> int:

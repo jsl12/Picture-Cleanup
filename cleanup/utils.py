@@ -97,7 +97,7 @@ def dupicates_to_file(df: pd.DataFrame, file, keys=None):
     return utils.dfs_to_file(duplicate_sets(df, keys), file)
 
 
-def gen_result_df(result_source, target_folder=None, exclude_path=None, include_suffix=None):
+def gen_result_df(result_source, target_folder=None, exclude_path=None, include_suffix=None, path_gen=None):
     if isinstance(result_source, str):
         result_source = Path(result_source)
 
@@ -129,7 +129,9 @@ def gen_result_df(result_source, target_folder=None, exclude_path=None, include_
 
     if target_folder is None:
         target_folder = Path.cwd()
-    df['target'] = df.apply(lambda row: Path(target_folder) / gen_target_path(row) / row['path'].name, axis=1)
+    if path_gen is None:
+        path_gen = flat_path_gen
+    df['target'] = df.apply(lambda row: Path(target_folder) / path_gen(row), axis=1)
 
     res = pd.DataFrame(
         data={
@@ -158,13 +160,13 @@ def select_date(row: pd.Series):
     else:
         return date
 
-def gen_target_path(row, format='%Y-%m-%d'):
+def flat_path_gen(row, format='%Y-%m-%d'):
     date = row['pathdate']
     if pd.isnull(date):
         return '0000-00-00'
     else:
         try:
-            return Path(date.strftime(format))
+            return Path(date.strftime(format))  / row['path'].name
         except Exception as e:
             raise e
 
