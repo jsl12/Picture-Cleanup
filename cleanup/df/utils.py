@@ -2,7 +2,6 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 import exifread
 import pandas as pd

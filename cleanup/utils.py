@@ -133,14 +133,10 @@ def gen_result_df(result_source, target_folder=None, exclude_path=None, include_
         path_gen = flat_path_gen
     df['target'] = df.apply(lambda row: Path(target_folder) / path_gen(row), axis=1)
 
-    res = pd.DataFrame(
-        data={
-            'original path': df['path'],
-            'target path': df['target'],
-            'target parent': df['target'].apply(lambda p: p.parents[0])
-        }
-    )
-    return res
+    df = df.sort_values('st_size')
+    df = df[~df.duplicated('target', keep='first')]
+    df = df.sort_index()
+    return df
 
 def select_date(row: pd.Series):
     keys = [
