@@ -5,12 +5,24 @@ from types import GeneratorType
 
 import exifread
 import pandas as pd
+import yaml
 
 from .utils import scan_pathdate, read_os_stats, read_exif
 from ..utils import filter_path, filter_extension
 
 LOGGER = logging.getLogger(__name__)
 
+
+def stat_df_yaml(source, yaml_path, **kwargs):
+    with Path(yaml_path).open('r') as file:
+        cfg = yaml.load(file, Loader=yaml.SafeLoader)
+    return stat_df(
+        source=source,
+        min_size=cfg['filesize_min'],
+        ext=cfg['include_ext'],
+        exclude_folders=cfg['exclude_folders'],
+        **kwargs
+    )[cfg['default columns']]
 
 def stat_df(source,
             keep_cols=None,
@@ -32,13 +44,14 @@ def stat_df(source,
     if exclude_folders is not None:
         assert all([isinstance(folder, str) for folder in exclude_folders])
         LOGGER.info(f'folder exclusions: {exclude_folders}')
-        df['excluded dir'] = filter_path(df, exclude_folders, 'path')
+        df = df[~filter_path(df, exclude_folders, 'path')]
 
     if ext != 'all':
         assert all([isinstance(e, str) for e in ext])
         LOGGER.info(f'checking file extensions: {ext}')
-        df['included ext'] = filter_extension(df, ext, 'path')
+        df = df[filter_extension(df, ext, 'path')]
 
+    df = df.reset_index(drop=True)
     dfs = [df]
 
     if os_meta:
@@ -52,7 +65,7 @@ def stat_df(source,
     df = pd.concat(dfs, axis=1)
 
     if min_size is not None:
-        df['above min file size'] = df['st_size'] > min_size
+        df = df[df['st_size'] > min_size]
 
     LOGGER.info(f'converting timestamps: {df.shape[0]} files')
     for col in df:
