@@ -3,5 +3,6 @@ venv
 temp*
 .idea
 jsl*
+jdl*
 *.egg*
 .ipynb_checkpoints
