@@ -7,22 +7,31 @@ import exifread
 import pandas as pd
 import yaml
 
-from .utils import scan_pathdate, read_os_stats, read_exif
+from .utils import scan_pathdate, read_os_stats, read_exif, timer
 from ..utils import filter_path, filter_extension
 
 LOGGER = logging.getLogger(__name__)
 
-
+@timer
 def stat_df_yaml(source, yaml_path, **kwargs):
     with Path(yaml_path).open('r') as file:
         cfg = yaml.load(file, Loader=yaml.SafeLoader)
-    return stat_df(
-        source=source,
-        min_size=cfg['filesize_min'],
-        ext=cfg['include_ext'],
-        exclude_folders=cfg['exclude_folders'],
-        **kwargs
-    )[cfg['default columns']]
+
+    if 'filesize_min' in cfg:
+        kwargs['min_size'] = cfg['filesize_min']
+
+    if 'include_ext' in cfg:
+        kwargs['ext'] = cfg['include_ext']
+
+    if 'exclude_folders' in cfg:
+        kwargs['exclude_folders'] = cfg['exclude_folders']
+
+    res = stat_df(source, **kwargs)
+
+    if 'default_columns' in cfg:
+        res = res[[c for c in cfg['default_columns'] if c in res.columns]]
+
+    return res
 
 def stat_df(source,
             keep_cols=None,
