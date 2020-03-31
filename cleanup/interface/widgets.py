@@ -7,11 +7,12 @@ import qgrid
 import yaml
 from IPython.display import clear_output
 
-from ..df import utils
 from . import layouts
 from .dupbar import DupBar
 from .excbar import FilterSection
 from .filebar import LoadBar, SaveBar
+from .. import utils
+
 
 class DupInterface:
     @staticmethod
