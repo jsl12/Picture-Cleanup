@@ -3,55 +3,17 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import yaml
 
-from . import preprocess
 from . import utils
-from .interface.grid import grid_from_yaml
 
 
 class UniqueIDer:
     w = 35
-    @staticmethod
-    @utils.timer
-    def from_yaml(yaml_path, df: pd.DataFrame = None):
-        with Path(yaml_path).open('r') as file:
-            cfg = yaml.load(file, Loader=yaml.SafeLoader)
-
-        if df is None:
-            p = Path(cfg['df'])
-            print(f'Reading {p.stat().st_size / (10**6):.2f} MB from {p.name}')
-            df = pd.read_pickle(p)
-
-        if 'default_columns' in cfg:
-            df = df[cfg['default_columns']]
-
-        pre_processors = []
-
-        if 'exclude_folders' in cfg:
-            pre_processors.append(preprocess.FolderExcluder(cfg['exclude_folders']))
-
-        if 'include_ext' in cfg:
-            pre_processors.append(preprocess.FileIncluder(cfg['include_ext']))
-
-        if 'filesize_min' in cfg:
-            pre_processors.append(preprocess.MinFileSize(cfg['filesize_min']))
-
-        for processor in pre_processors:
-            df = processor.process(df=df)
-
-        # print('-' * UniqueIDer.w)
-        print(f'Total files'.ljust(UniqueIDer.w) + f'{df.shape[0]} files')
-        return UniqueIDer(df, yaml_path=yaml_path)
-
-    def __init__(self, df: pd.DataFrame, yaml_path=None):
+    def __init__(self, df: pd.DataFrame):
         self.df = df.copy()
         self.df.index = pd.RangeIndex(stop=df.shape[0])
         self.mask_u = pd.Series(np.zeros(df.shape[0], dtype=bool), index=self.df.index)
         self.mask_d = self.mask_u.copy()
-
-        if yaml_path is not None:
-            self.yaml_path = yaml_path
 
     @property
     def unique(self) -> pd.DataFrame:
@@ -137,8 +99,6 @@ class UniqueIDer:
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')
 
-        self.df['mask_d'] = self.mask_d
-
     def select_index(self, group: pd.DataFrame, priority_keyword=None) -> int:
         """
         Selects a single integer index from a DataFrame
@@ -185,12 +145,3 @@ class UniqueIDer:
 
         # if it makes it down here, just return the whole stem
         return res
-
-    def grid(self, yaml_path=None):
-        if yaml_path is not None:
-            self.yaml_path = yaml_path
-
-        if hasattr(self, 'yaml_path'):
-            return grid_from_yaml(self.yaml_path, self.df)
-        else:
-            print(f'SizeSorter has no yaml_path attribute to use')
