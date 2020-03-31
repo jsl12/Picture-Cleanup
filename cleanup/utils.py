@@ -140,8 +140,8 @@ def gen_result_df(result_source, target_folder=None, exclude_path=None, include_
 
 def select_date(row: pd.Series):
     keys = [
-        'Image DateTime',
         'EXIF DateTimeOriginal',
+        'Image DateTime',
         'pathdate'
     ]
     try:

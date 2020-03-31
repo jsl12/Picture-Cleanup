@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from . import preprocess
 from . import utils
 from .interface.grid import grid_from_yaml
 
@@ -25,30 +26,23 @@ class UniqueIDer:
         if 'default_columns' in cfg:
             df = df[cfg['default_columns']]
 
-        mask = pd.Series(np.ones(df.shape[0], dtype=bool), index=df.index)
+        pre_processors = []
 
         if 'exclude_folders' in cfg:
-            print(f'Processing folder exclusions'.ljust(UniqueIDer.w), end='')
-            exc = utils.filter_path(df, cfg['exclude_folders'])
-            print(f'{exc.sum()} files')
-            mask &= ~exc
+            pre_processors.append(preprocess.FolderExcluder(cfg['exclude_folders']))
 
         if 'include_ext' in cfg:
-            print(f'Processing file extensions'.ljust(UniqueIDer.w), end='')
-            inc = utils.filter_extension(df, cfg['include_ext'])
-            print(f'{inc.sum()} files')
-            mask &= inc
+            pre_processors.append(preprocess.FileIncluder(cfg['include_ext']))
 
         if 'filesize_min' in cfg:
-            print(f'Processing file sizes'.ljust(UniqueIDer.w), end='')
-            size = df['st_size'] >= cfg['filesize_min']
-            print(f'{(~size).sum()} files')
-            mask &= size
+            pre_processors.append(preprocess.MinFileSize(cfg['filesize_min']))
 
-        res = df[mask]
-        print('-' * UniqueIDer.w)
-        print(f'Total files'.ljust(UniqueIDer.w) + f'{res.shape[0]} files')
-        return UniqueIDer(res, yaml_path=yaml_path)
+        for processor in pre_processors:
+            df = processor.process(df=df)
+
+        # print('-' * UniqueIDer.w)
+        print(f'Total files'.ljust(UniqueIDer.w) + f'{df.shape[0]} files')
+        return UniqueIDer(df, yaml_path=yaml_path)
 
     def __init__(self, df: pd.DataFrame, yaml_path=None):
         self.df = df.copy()
