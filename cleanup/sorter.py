@@ -8,6 +8,7 @@ import yaml
 from . import utils
 from .interface.grid import grid_from_yaml
 
+
 class UniqueIDer:
     w = 35
     @staticmethod
@@ -66,28 +67,55 @@ class UniqueIDer:
     def duplicated(self) -> pd.DataFrame:
         return self.df[self.mask_d]
 
-    def mark_single_unique(self, index, unique_loc):
+    def mark_single_unique(self, index: pd.Index, unique_loc: int):
+        """
+        Wrapper to ensure that only a single file gets marked as unique
+
+        :param index:
+        :param unique_loc:
+        :return:
+        """
+        # Create a new boolean Series with the same index
         res = pd.Series(np.zeros(index.shape[0], dtype=bool), index=index)
+
+        # Set a single location to True
         res.loc[unique_loc] = True
+
+        # Mark the master unique Series with the mask
         self.mark_unique(res, 'end tree')
+
+        # Mark the master duplicate Series with the inverse of that mask
         self.mark_duplicate(~res, 'end tree dup')
         return res, ~res
 
     def mark_unique(self, input_mask, name=None):
-        self.mark_mask(input_mask, 'mask_u', save_name=name)
-        self.save_mask(input_mask, 'mask_u')
+        self.mark_mask(input_mask, 'mask_u', save_name=name or 'mask_u')
 
     def mark_duplicate(self, input_mask, name=None):
-        self.mark_mask(input_mask, 'mask_d', save_name=name)
-        self.save_mask(input_mask, 'mask_d')
+        self.mark_mask(input_mask, 'mask_d', save_name=name or 'mask_d')
 
     def mark_mask(self, input_mask, mask_name, save_name=None):
+        """
+        Generic function for marking positions of one of the mask attributes of the UniqueIDer
+
+        :param input_mask:
+        :param mask_name:
+        :param save_name:
+        :return:
+        """
         if save_name is not None:
             self.save_mask(input_mask, save_name)
         if hasattr(self, mask_name):
             getattr(self, mask_name)[input_mask.index] = input_mask
 
     def save_mask(self, mask: pd.Series, name:str):
+        """
+        Sets a column in the DataFrame (self.df) with the name argument to the values in the mask argument
+
+        :param mask: Series of indices, values to set
+        :param name: Name of column in self.df
+        :return: None
+        """
         if name not in self.df:
             self.df[name] = pd.Series(np.zeros(self.df.shape[0], dtype=bool), index=self.df.index)
         self.df.loc[mask.index, name] = mask
@@ -109,26 +137,39 @@ class UniqueIDer:
         grouped = self.df[big_dup].groupby(keys)
         print(f'{grouped.ngroups} groups, {grouped.size().mean():.1f} avg files')
         for idx, group in grouped:
-            res = self.select(group, *args, **kwargs)
-            un, dup = self.mark_single_unique(index=group.index, unique_loc=res)
+            i = self.select_index(group, *args, **kwargs)
+            unique, duplicate = self.mark_single_unique(index=group.index, unique_loc=i)
 
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')
 
         self.df['mask_d'] = self.mask_d
 
-    def select(self, group, priority_keyword=None) -> int:
+    def select_index(self, group: pd.DataFrame, priority_keyword=None) -> int:
+        """
+        Selects a single integer index from a DataFrame
+
+        :param group: DataFrame to select the index from
+        :param priority_keyword: Prioritizes paths with this keyword in them
+        :return: int index
+        """
+        # If there's a priority_keyword
         if priority_keyword is not None:
+            # Check to see if it shows up in any of the paths
             lr = group['path'].apply(lambda p: priority_keyword in str(p))
             if lr.any():
+                # If so, return the index of the first path it shows up in
                 return lr[lr].index[0]
+
         lengths = group['filename'].apply(len)
+        # If the file names are not all the same length
         if not lengths.duplicated(keep=False).all():
-            res = lengths.idxmin()
+            # Return the index of where the minimum length is
+            return lengths.idxmin()
         else:
+            # Otherwise, sort by filename, then pathdate
             group = group.sort_values(['filename', 'pathdate'], ascending=True)
-            res = group.index[0]
-        return res
+            return group.index[0]
 
     @staticmethod
     def transform_filename(path: Path) -> str:
