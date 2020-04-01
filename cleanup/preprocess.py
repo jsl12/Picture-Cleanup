@@ -2,10 +2,10 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
-
+import re
 import pandas as pd
 import yaml
-
+from datetime import datetime
 from . import utils
 
 logger = logging.getLogger(__name__)
@@ -84,6 +84,29 @@ class MinFileSize(PreProcessor):
         return df[m]
 
 
-class OriginalFinder(PreProcessor):
-    def process(self, df: pd.DataFrame, path_col='path') -> pd.DataFrame:
+class BaseFilenameMaker(PreProcessor):
+    path_col:str = 'path'
+    base_col:str = 'base'
+
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        df[self.base_col] = df[self.path_col].apply(self.convert_base_filename)
         return df
+
+    @staticmethod
+    def convert_base_filename(path: Path) -> str:
+        filename = path.stem.replace('_ORG', '')
+
+        if filename[:3] == 'IMG':
+            if filename[3] == '_':
+                try:
+                    datetime.strptime(filename[4:12], '%Y%m%d')
+                except Exception as e:
+                    res = filename[:8]
+                else:
+                    res = filename
+            else:
+                res = filename
+        # elif filename[:3] == 'DSC':
+        else:
+            res = filename
+        return res
