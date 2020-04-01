@@ -69,3 +69,4 @@ def scan_date(path):
                 )
     except Exception:
         pass
+    return pd.NaT

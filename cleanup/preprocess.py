@@ -1,12 +1,16 @@
 import logging
-from dataclasses import dataclass
-from pathlib import Path
-from typing import List
 import re
+from dataclasses import dataclass
+from datetime import datetime, time
+from pathlib import Path
+from typing import List, Tuple
+
 import pandas as pd
 import yaml
-from datetime import datetime
+from exifread.classes import IfdTag
+
 from . import utils
+from .df.utils import scan_date
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +87,7 @@ class MinFileSize(PreProcessor):
         logger.info(f'Above filesize limit'.ljust(self.width) + f'{m.sum()}')
         return df[m]
 
+
 @dataclass
 class BaseFilenameMaker(PreProcessor):
     path_col:str = 'path'
@@ -113,4 +118,59 @@ class BaseFilenameMaker(PreProcessor):
             if m is not None:
                 filename = filename[:m.start('trim')] + filename[m.end('trim'):]
                 trim += m.group('trim')
-        return filename, trim
+        return filename, trim if trim != '' else None
+
+
+@dataclass
+class ScanPathDate(PreProcessor):
+    source_col:str = 'path'
+    res_col: str = 'pathdate'
+
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        df[self.res_col] = df[self.source_col].apply(lambda p: scan_date(p))
+        return df
+
+
+@dataclass
+class DateSelector(PreProcessor):
+    path_col:str = 'path'
+
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        df['selected date'] = df.apply(self.select_from_row, axis=1)
+        return df
+
+    @staticmethod
+    def select_from_row(row: pd.Series):
+        cols = ['Image DateTime', 'EXIF DateTimeOriginal', 'pathdate']
+        time_min = row[cols].dt.time == time.min
+        if not time_min.all():
+            return row[cols][~time_min].dropna().min()
+        else:
+            try:
+                return row[cols].dropna().min()
+            except Exception as e:
+                return pd.NaT
+
+
+@dataclass
+class ConvertIfdTag(PreProcessor):
+    cols: Tuple[str] = ('Image DateTime', 'EXIF DateTimeOriginal')
+
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        for c in self.cols:
+            if c in df:
+                df[c] = df[c].apply(self.convert)
+            else:
+                print(f'{c} is not in {df.columns}')
+        return df
+
+    @staticmethod
+    def convert(ifd: IfdTag) -> datetime:
+        if isinstance(ifd, IfdTag):
+            try:
+                return datetime.strptime(ifd.values, '%Y:%m:%d %H:%M:%S')
+            except Exception as e:
+                pass
+        elif isinstance(ifd, datetime):
+            return ifd
+        return pd.NaT
