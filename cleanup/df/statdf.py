@@ -7,8 +7,7 @@ import exifread
 import pandas as pd
 import yaml
 
-from .utils import scan_pathdate, read_os_stats, read_exif, timer
-from ..utils import filter_path, filter_extension
+from .utils import read_os_stats, read_exif, timer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,45 +19,24 @@ def stat_df_yaml(source, yaml_path, **kwargs):
     if 'filesize_min' in cfg:
         kwargs['min_size'] = cfg['filesize_min']
 
-    if 'include_ext' in cfg:
-        kwargs['ext'] = cfg['include_ext']
-
-    if 'exclude_folders' in cfg:
-        kwargs['exclude_folders'] = cfg['exclude_folders']
+    if 'default_columns' in cfg:
+        kwargs['keep_cols'] = cfg['default_columns']
 
     res = stat_df(source, **kwargs)
-
-    if 'default_columns' in cfg:
-        res = res[[c for c in cfg['default_columns'] if c in res.columns]]
 
     return res
 
 def stat_df(source,
             keep_cols=None,
-            parse_pathdate=True,
             min_size=50000,
-            ext='all',
-            exclude_folders=None,
             os_meta=True,
             exif_meta=False,
-            suffix_col=True,
-            unique_size_col=False,
             stop_tag=exifread.DEFAULT_STOP_TAG):
     LOGGER.info(f'constructing df from: "{source}"')
 
     df = file_df(source)
     if df is None:
         return pd.DataFrame()
-
-    if exclude_folders is not None:
-        assert all([isinstance(folder, str) for folder in exclude_folders])
-        LOGGER.info(f'folder exclusions: {exclude_folders}')
-        df = df[~filter_path(df, exclude_folders, 'path')]
-
-    if ext != 'all':
-        assert all([isinstance(e, str) for e in ext])
-        LOGGER.info(f'checking file extensions: {ext}')
-        df = df[filter_extension(df, ext, 'path')]
 
     df = df.reset_index(drop=True)
     dfs = [df]
@@ -81,18 +59,8 @@ def stat_df(source,
         if ('time' in col) and ('_ns' not in col):
             df[col] = pd.to_datetime(df[col].apply(datetime.fromtimestamp))
 
-    if parse_pathdate:
-        LOGGER.info(f'parsing pathdates: {df.shape[0]} files')
-        df['pathdate'] = scan_pathdate(df, 'path')
-
     if keep_cols is not None:
         df = df[keep_cols]
-
-    if suffix_col:
-        df['file type'] = df['path'].apply(lambda p: p.suffix)
-
-    if unique_size_col:
-        df['unique size'] = ~df.duplicated('st_size', keep=False)
 
     return df
 
