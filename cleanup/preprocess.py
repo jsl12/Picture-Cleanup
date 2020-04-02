@@ -134,22 +134,21 @@ class ScanPathDate(PreProcessor):
 @dataclass
 class DateSelector(PreProcessor):
     path_col:str = 'path'
+    res_col:str = 'selected_date'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        df['selected date'] = df.apply(self.select_from_row, axis=1)
+        df[self.res_col] = df.apply(self.select_from_row, axis=1)
         return df
 
     @staticmethod
     def select_from_row(row: pd.Series):
-        cols = ['Image DateTime', 'EXIF DateTimeOriginal', 'pathdate']
-        time_min = row[cols].dt.time == time.min
-        if not time_min.all():
-            return row[cols][~time_min].dropna().min()
+        cols = ['filename_date', 'pathdate', 'EXIF DateTimeOriginal', 'Image DateTime']
+        for c in cols:
+            if c in row:
+                if not pd.isnull(row[c]):
+                    return row[c]
         else:
-            try:
-                return row[cols].dropna().min()
-            except Exception as e:
-                return pd.NaT
+            return pd.NaT
 
 
 @dataclass

@@ -38,10 +38,10 @@ class UniqueIDer:
         res.loc[unique_loc] = True
 
         # Mark the master unique Series with the mask
-        self.mark_unique(res, 'end tree')
+        self.mark_unique(res, 'unique from group')
 
         # Mark the master duplicate Series with the inverse of that mask
-        self.mark_duplicate(~res, 'end tree dup')
+        self.mark_duplicate(~res, 'dup from group')
         return res, ~res
 
     def mark_unique(self, input_mask, name=None):
@@ -77,16 +77,10 @@ class UniqueIDer:
         self.df.loc[mask.index, name] = mask
 
     @utils.timer
-    def process(self, keys=['st_size', 'suffix', 'shortname'], *args, **kwargs):
-        print(f'Creating suffix column')
-        self.df['suffix'] = self.df['path'].apply(lambda p: p.suffix.upper())
-
-        print('Creating shortname column')
-        self.df['shortname'] = self.df['path'].apply(self.transform_filename)
-
+    def process(self, keys=None, *args, **kwargs):
         print('Calculating duplicates'.ljust(self.w), end='')
         big_dup = self.df.duplicated(keys, keep=False)
-        self.mark_unique(~big_dup, 'not big dups')
+        self.mark_unique(~big_dup, f'not dup: {", ".join(list(keys))}')
         print(f'{(~big_dup).sum()} unique, {big_dup.sum()} duplicate')
 
         print(f'Processing groups of duplicates'.ljust(self.w), end='')
@@ -114,16 +108,7 @@ class UniqueIDer:
             if lr.any():
                 # If so, return the index of the first path it shows up in
                 return lr[lr].index[0]
-
-        lengths = group['filename'].apply(len)
-        # If the file names are not all the same length
-        if not lengths.duplicated(keep=False).all():
-            # Return the index of where the minimum length is
-            return lengths.idxmin()
-        else:
-            # Otherwise, sort by filename, then pathdate
-            group = group.sort_values(['filename', 'pathdate'], ascending=True)
-            return group.index[0]
+        return group.index[0]
 
     @staticmethod
     def transform_filename(path: Path) -> str:

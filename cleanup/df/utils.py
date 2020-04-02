@@ -45,7 +45,7 @@ date_regex = re.compile(
     '[- _\\\\]?'                # delimter between year and month, could be \ between paths
     '(?P<month>[01]\d{1})'      # month
     '([- _]?'                   # delimter between month and day
-    '(?P<day>\d{2}))?'          # day (optional)
+    '(?P<day>\d{2}))'          # day
 )
 
 
