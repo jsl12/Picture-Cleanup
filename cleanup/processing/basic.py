@@ -13,39 +13,47 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FolderExcluder(Processor):
     folders: List[str]
-    path_col: str = 'path'
+    source_col: str = 'path'
+    res_col: str = 'exluded_folder'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        m = filter.filter_path(df, self.folders, self.path_col)
+        m = ~filter.filter_path(df, self.folders, self.source_col)
         logger.info(f'Excluded files based on their paths'.ljust(self.width) + f'{m.sum()}')
-        return df[~m]
+        df[self.res_col] = m
+        return df
 
 
 @dataclass
 class FileIncluder(Processor):
     file_types: List[str]
-    path_col: str = 'path'
+    source_col: str = 'path'
+    res_col: str = 'included_filetype'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        m = filter.filter_extension(df, self.file_types, self.path_col)
+        m = filter.filter_extension(df, self.file_types, self.source_col)
         logger.info(f'Included files based on ext'.ljust(self.width) + f'{m.sum()}')
-        return df[m]
+        df[self.res_col] = m
+        return df
 
 
 @dataclass
 class MinFileSize(Processor):
     min_size: int
-    size_col: str = 'st_size'
+    source_col: str = 'st_size'
+    res_col: str = 'above_min_filesize'
 
     def process(self, df: pd.DataFrame, ) -> pd.DataFrame:
-        m = df[self.size_col] > self.min_size
+        m = df[self.source_col] > self.min_size
         logger.info(f'Above filesize limit'.ljust(self.width) + f'{m.sum()}')
-        return df[m]
+        df[self.res_col] = m
+        return df
+
 
 @dataclass
 class ParentCol(Processor):
-    path_col:str = 'path'
+    source_col:str = 'path'
+    res_col: str = 'parent'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        df['parent'] = df[self.path_col].apply(lambda p: p.parents[0])
+        df[self.res_col] = df[self.source_col].apply(lambda p: p.parents[0])
         return df

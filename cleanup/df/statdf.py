@@ -20,7 +20,7 @@ def stat_df_yaml(source, yaml_path, **kwargs):
         kwargs['min_size'] = cfg['filesize_min']
 
     if 'default_columns' in cfg:
-        kwargs['keep_cols'] = cfg['default_columns']
+        kwargs['keep_cols'] = cfg['keep_cols']
 
     res = stat_df(source, **kwargs)
 

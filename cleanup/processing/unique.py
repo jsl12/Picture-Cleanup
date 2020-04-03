@@ -1,18 +1,28 @@
-from datetime import datetime
-from pathlib import Path
-from collections.abc import Iterable
+import logging
+from dataclasses import dataclass
+from typing import Iterable, List
+
 import numpy as np
 import pandas as pd
 
-from . import utils
+from .processor import Processor
+from .. import utils
+
+logger = logging.getLogger(__name__)
 
 
-class UniqueIDer:
-    w = 35
-    def __init__(self, df: pd.DataFrame):
-        self.df = df.copy()
-        self.df.index = pd.RangeIndex(stop=df.shape[0])
-        self.mask_u = pd.Series(np.zeros(df.shape[0], dtype=bool), index=self.df.index)
+@dataclass
+class UniqueIDer(Processor):
+    cols: List[str]
+    w:int = 35
+    # def __init__(self, df: pd.DataFrame):
+        # self.df = df.copy()
+        # self.df.index = pd.RangeIndex(stop=df.shape[0])
+        # self.mask_u = pd.Series(np.zeros(df.shape[0], dtype=bool), index=self.df.index)
+        # self.mask_d = self.mask_u.copy()
+
+    def init_masks(self, df: pd.DataFrame):
+        self.mask_u = pd.Series(np.zeros(df.shape[0], dtype=bool), index=df.index)
         self.mask_d = self.mask_u.copy()
 
     @property
@@ -77,23 +87,24 @@ class UniqueIDer:
         self.df.loc[mask.index, name] = mask
 
     @utils.timer
-    def process(self, keys=None, *args, **kwargs):
+    def process(self, df: pd.DataFrame, keys: List[str] = None, *args, **kwargs):
         print('Calculating duplicates'.ljust(self.w), end='')
-        big_dup = self.df.duplicated(keys, keep=False)
+        big_dup = df.duplicated(keys, keep=False)
         self.mark_unique(~big_dup, f'not dup: {", ".join(list(keys))}')
         print(f'{(~big_dup).sum()} unique, {big_dup.sum()} duplicate')
 
         print(f'Processing groups of duplicates'.ljust(self.w), end='')
-        grouped = self.df[big_dup].groupby(keys)
+        grouped = df[big_dup].groupby(keys)
         print(f'{grouped.ngroups} groups, {grouped.size().mean():.1f} avg files')
-        self.df['reason'] = ''
+        df['reason'] = ''
         for idx, group in grouped:
             i, reason = self.select_index(group, *args, **kwargs)
             self.mark_single_unique(index=group.index, unique_loc=i)
-            self.df.loc[i, 'reason'] = reason
+            df.loc[i, 'reason'] = reason
 
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')
+        return df
 
     def select_index(self, group: pd.DataFrame, priority_keyword=None):
         """
@@ -114,24 +125,3 @@ class UniqueIDer:
                 # If so, return the index of the first path it shows up in
                 return lr[lr].index[0], 'priority'
         return group.index[0], 'first in list'
-
-    @staticmethod
-    def transform_filename(path: Path) -> str:
-        # path.stem is the filename without the extension
-        res: str = path.stem
-        try:
-            # try to parse the first 8 chars as YYYYMMDD
-            date = datetime.strptime(res[:8], '%Y%m%d')
-        except Exception:
-            # if any error happens, no problem, just keep going
-            pass
-        else:
-            # only if it was successful (no exceptions raised), return the first 15 chars
-            return res[:15]
-
-        # check if the ASCII number of the first 3 chars of res are letters
-        if res[:3].isalpha():
-            return res[:8]
-
-        # if it makes it down here, just return the whole stem
-        return res

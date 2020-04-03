@@ -6,11 +6,24 @@ from typing import List
 import pandas as pd
 import yaml
 
-from .basic import FolderExcluder, MinFileSize, FileIncluder
+from .base import BaseFilenameMaker
+from .basic import FolderExcluder, MinFileSize, FileIncluder, ParentCol
+from .date import ScanPathDate
 from .processor import Processor
+from .unique import UniqueIDer
 
 logger = logging.getLogger(__name__)
 
+
+processor_map = {
+    'exclude_folders': FolderExcluder,
+    'filesize_min': MinFileSize,
+    'include_ext': FileIncluder,
+    'duplicate_keys': UniqueIDer,
+    'base_filename': BaseFilenameMaker,
+    'parent_col': ParentCol,
+    'pathdate': ScanPathDate
+}
 
 @dataclass
 class ProcessChain:
@@ -20,25 +33,23 @@ class ProcessChain:
     def from_yaml(yaml_path):
         yaml_path = yaml_path if isinstance(yaml_path, Path) else Path(yaml_path)
         with yaml_path.open('r') as file:
-            cfg = yaml.load(file, Loader=yaml.SafeLoader)
+            cfg = yaml.load(file, Loader=yaml.SafeLoader)['processing']
 
-        objs = []
+        def make_processor(config):
+            processor_key = list(config.keys())[0]
+            processor = processor_map[processor_key]
+            args = config[processor_key]
+            if isinstance(args, dict):
+                return processor(**args)
+            else:
+                return processor(args)
 
-        if 'exclude_folders' in cfg:
-            objs.append(FolderExcluder(cfg['exclude_folders']))
-
-        if 'include_ext' in cfg:
-            objs.append(FileIncluder(cfg['include_ext']))
-
-        if 'filesize_min' in cfg:
-            objs.append(MinFileSize(cfg['filesize_min']))
-
-        return ProcessChain(objs)
+        return ProcessChain([make_processor(p) for p in cfg])
 
     def process_all(self, df: pd.DataFrame) -> pd.DataFrame:
-        logger.info(f'Beginning pre-processing of {df.shape[0]} files')
+        logger.info(f'Processing'.ljust(50) + f'{df.shape[0]} files')
         for p in self.processors:
-            logger.info(type(p))
+            logger.info(repr(p))
             df = p.process(df)
         logger.info('-' * 70)
         logger.info(f'Total remaining files'.ljust(50) + f'{df.shape[0]}')

@@ -18,7 +18,7 @@ class ScanPathDate(Processor):
 
 @dataclass
 class DateSelector(Processor):
-    path_col:str = 'path'
+    source_col:str = 'path'
     res_col:str = 'selected_date'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
