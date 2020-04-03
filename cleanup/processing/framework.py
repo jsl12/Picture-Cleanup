@@ -33,7 +33,7 @@ class ProcessChain:
         if 'filesize_min' in cfg:
             objs.append(MinFileSize(cfg['filesize_min']))
 
-        return ProcessChain(pre_processors=objs)
+        return ProcessChain(objs)
 
     def process_all(self, df: pd.DataFrame) -> pd.DataFrame:
         logger.info(f'Beginning pre-processing of {df.shape[0]} files')

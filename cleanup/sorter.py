@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-
+from collections.abc import Iterable
 import numpy as np
 import pandas as pd
 
@@ -86,14 +86,16 @@ class UniqueIDer:
         print(f'Processing groups of duplicates'.ljust(self.w), end='')
         grouped = self.df[big_dup].groupby(keys)
         print(f'{grouped.ngroups} groups, {grouped.size().mean():.1f} avg files')
+        self.df['reason'] = ''
         for idx, group in grouped:
-            i = self.select_index(group, *args, **kwargs)
-            unique, duplicate = self.mark_single_unique(index=group.index, unique_loc=i)
+            i, reason = self.select_index(group, *args, **kwargs)
+            self.mark_single_unique(index=group.index, unique_loc=i)
+            self.df.loc[i, 'reason'] = reason
 
         print('Unique'.ljust(self.w) + f'{self.mask_u.sum()}')
         print('Duplicated'.ljust(self.w) + f'{self.mask_d.sum()}')
 
-    def select_index(self, group: pd.DataFrame, priority_keyword=None) -> int:
+    def select_index(self, group: pd.DataFrame, priority_keyword=None):
         """
         Selects a single integer index from a DataFrame
 
@@ -103,12 +105,15 @@ class UniqueIDer:
         """
         # If there's a priority_keyword
         if priority_keyword is not None:
-            # Check to see if it shows up in any of the paths
-            lr = group['path'].apply(lambda p: priority_keyword in str(p))
+            if isinstance(priority_keyword, Iterable):
+                lr = group['path'].apply(str).str.contains('|'.join(priority_keyword), case=False)
+            else:
+                # Check to see if it shows up in any of the paths
+                lr = group['path'].apply(lambda p: priority_keyword in str(p))
             if lr.any():
                 # If so, return the index of the first path it shows up in
-                return lr[lr].index[0]
-        return group.index[0]
+                return lr[lr].index[0], 'priority'
+        return group.index[0], 'first in list'
 
     @staticmethod
     def transform_filename(path: Path) -> str:

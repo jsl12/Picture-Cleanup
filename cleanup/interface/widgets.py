@@ -11,7 +11,7 @@ from . import layouts
 from .dupbar import DupBar
 from .excbar import FilterSection
 from .filebar import LoadBar, SaveBar
-from .. import utils
+from ..processing import filter
 
 
 class DupInterface:
@@ -197,7 +197,7 @@ class DupInterface:
         return list(self.exclude_section.children[0].children[-1].value)
 
     def mask_exclude_folders(self):
-        self._mask_exf = utils.filter_path(self._df, self.exclude_folders, 'path')
+        self._mask_exf = filter.filter_path(self._df, self.exclude_folders, 'path')
         if self.exclude_section.children[0].children[0].value:
             return self._mask_exf
 
@@ -206,7 +206,7 @@ class DupInterface:
         return list(self.exclude_section.children[1].children[-1].value)
 
     def mask_include_ext(self):
-        self._mask_ext = utils.filter_extension(self._df, self.include_ext, 'path')
+        self._mask_ext = filter.filter_extension(self._df, self.include_ext, 'path')
         if self.exclude_section.children[1].children[0].value:
             return self._mask_ext
 

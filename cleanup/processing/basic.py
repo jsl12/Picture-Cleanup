@@ -4,10 +4,11 @@ from typing import List
 
 import pandas as pd
 
+from . import filter
 from .processor import Processor
-from .. import utils
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class FolderExcluder(Processor):
@@ -15,7 +16,7 @@ class FolderExcluder(Processor):
     path_col: str = 'path'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        m = utils.filter_path(df, self.folders, self.path_col)
+        m = filter.filter_path(df, self.folders, self.path_col)
         logger.info(f'Excluded files based on their paths'.ljust(self.width) + f'{m.sum()}')
         return df[~m]
 
@@ -26,7 +27,7 @@ class FileIncluder(Processor):
     path_col: str = 'path'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        m = utils.filter_extension(df, self.file_types, self.path_col)
+        m = filter.filter_extension(df, self.file_types, self.path_col)
         logger.info(f'Included files based on ext'.ljust(self.width) + f'{m.sum()}')
         return df[m]
 
@@ -40,3 +41,11 @@ class MinFileSize(Processor):
         m = df[self.size_col] > self.min_size
         logger.info(f'Above filesize limit'.ljust(self.width) + f'{m.sum()}')
         return df[m]
+
+@dataclass
+class ParentCol(Processor):
+    path_col:str = 'path'
+
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        df['parent'] = df[self.path_col].apply(lambda p: p.parents[0])
+        return df

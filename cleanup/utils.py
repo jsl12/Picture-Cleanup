@@ -3,11 +3,11 @@ import logging
 import time
 from datetime import timedelta
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pandas as pd
 
+from cleanup.processing.filter import filter_extension, filter_path
 from .df.clean import convert_datetime
 
 LOGGER = logging.getLogger(__name__)
@@ -116,7 +116,7 @@ def gen_result_df(result_source, target_folder=None, exclude_path=None, include_
     mask = pd.Series(np.ones(df.shape[0], dtype=bool), index=df.index)
 
     if exclude_path is not None:
-        mask_exclude_folders = filter_path(df=df, exclude_list=[exclude_path] if not isinstance(exclude_path, list) else exclude_path)
+        mask_exclude_folders = filter_path(df=df, filter_list=[exclude_path] if not isinstance(exclude_path, list) else exclude_path)
         mask &= ~mask_exclude_folders
 
     if include_suffix is not None:
@@ -165,10 +165,3 @@ def flat_path_gen(row, format='%Y-%m-%d'):
             return Path(date.strftime(format))  / row['path'].name
         except Exception as e:
             raise e
-
-def filter_extension(df, include_list, path_col='path'):
-    return pd.DataFrame(data={e: df[path_col].apply(lambda p: p.suffix.upper()) == e.upper() for e in include_list}).any(axis=1)
-
-
-def filter_path(df: pd.DataFrame, exclude_list: List[str], path_col: str = 'path') -> pd.Series:
-    return pd.DataFrame(data={folder: df[path_col].apply(str).str.contains(folder, case=False) for folder in exclude_list}).any(axis=1)
