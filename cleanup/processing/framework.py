@@ -21,12 +21,12 @@ processor_map = {
     'exclude_folders': FolderExcluder,
     'filesize_min': MinFileSize,
     'include_ext': FileIncluder,
-    'duplicate_keys': UniqueIDer,
     'base_filename': BaseFilenameMaker,
     'parent_col': ParentCol,
     'pathdate': ScanPathDate,
     'convert_ifdtag': ConvertIfdTag,
-    'select_date': DateSelector
+    'select_date': DateSelector,
+    'duplicates': UniqueIDer
 }
 
 

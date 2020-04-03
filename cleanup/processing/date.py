@@ -21,9 +21,11 @@ class ScanPathDate(Processor):
 class DateSelector(Processor):
     source_cols: List[str]
     res_col:str = 'selected_date'
+    null_col: str = 'valid date'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         df[self.res_col] = df.apply(self.select_from_row, cols=self.source_cols, axis=1)
+        df[self.null_col] = ~pd.isnull(df['selected_date'])
         return df
 
     @staticmethod

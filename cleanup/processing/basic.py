@@ -18,7 +18,7 @@ class FolderExcluder(Processor):
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         m = ~filter.filter_path(df, self.folders, self.source_col)
-        logger.info(f'Excluded files based on their paths'.ljust(self.width) + f'{m.sum()}')
+        logger.info(f'Included files based on their paths'.ljust(self.width) + f'{m.sum()}')
         df[self.res_col] = m
         return df
 
