@@ -8,7 +8,9 @@ import yaml
 
 from .base import BaseFilenameMaker
 from .basic import FolderExcluder, MinFileSize, FileIncluder, ParentCol
+from .date import DateSelector
 from .date import ScanPathDate
+from .processor import ConvertIfdTag
 from .processor import Processor
 from .unique import UniqueIDer
 
@@ -22,8 +24,11 @@ processor_map = {
     'duplicate_keys': UniqueIDer,
     'base_filename': BaseFilenameMaker,
     'parent_col': ParentCol,
-    'pathdate': ScanPathDate
+    'pathdate': ScanPathDate,
+    'convert_ifdtag': ConvertIfdTag,
+    'select_date': DateSelector
 }
+
 
 @dataclass
 class ProcessChain:

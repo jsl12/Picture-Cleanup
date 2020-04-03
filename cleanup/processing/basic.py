@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class FolderExcluder(Processor):
     folders: List[str]
     source_col: str = 'path'
-    res_col: str = 'exluded_folder'
+    res_col: str = 'included_folder'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         m = ~filter.filter_path(df, self.folders, self.source_col)

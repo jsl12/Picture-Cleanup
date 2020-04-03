@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 import pandas as pd
 
@@ -18,16 +19,15 @@ class ScanPathDate(Processor):
 
 @dataclass
 class DateSelector(Processor):
-    source_col:str = 'path'
+    source_cols: List[str]
     res_col:str = 'selected_date'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        df[self.res_col] = df.apply(self.select_from_row, axis=1)
+        df[self.res_col] = df.apply(self.select_from_row, cols=self.source_cols, axis=1)
         return df
 
     @staticmethod
-    def select_from_row(row: pd.Series):
-        cols = ['filename_date', 'pathdate', 'EXIF DateTimeOriginal', 'Image DateTime']
+    def select_from_row(row: pd.Series, cols: List[str]):
         for c in cols:
             if c in row:
                 if not pd.isnull(row[c]):
