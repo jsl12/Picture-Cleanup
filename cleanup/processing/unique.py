@@ -27,6 +27,8 @@ class UniqueIDer(Processor):
         if len(self.mask_cols) > 0:
             logger.info(f"Applying 'continue' mask")
             process_df = df[df[self.mask_cols].all(axis=1)].sort_values('path', ascending=False)
+        else:
+            process_df = df
 
         logger.info('Calculating duplicates')
         dups = process_df.duplicated(self.source_cols, keep=False)
