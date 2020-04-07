@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 
@@ -9,21 +10,16 @@ from .processor import Processor
 
 @dataclass
 class BaseFilenameMaker(Processor):
+    regexes: List[str]
     path_col:str = 'path'
-    base_col:str = 'base'
+    res_col:str = 'base'
     match_col:str = 'match'
 
     def __post_init__(self):
-        self.regexes = [
-            re.compile('(?P<trim>_ORG)'),
-            re.compile('(?P<trim>[abc]? ?(\(\d+\))$)'),
-            re.compile('(?P<key>^(PANO|R001|_SC|MVI|CIM|ST\w))(?(key).*)(?P<trim>[-_~]\d{1,3}$)'),
-            re.compile('(?P<key>^(DSC|IMG))(?(key).*)(?P<trim>[-_~]\d{1}$)'),
-            re.compile('(?P<trim>~\d+)$')
-        ]
+        self.regexes = [re.compile(r, re.IGNORECASE) for r in self.regexes]
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        cols = [self.base_col, self.match_col]
+        cols = [self.res_col, self.match_col]
         vals = df[self.path_col].apply(self.convert_base_filename, regexes=self.regexes)
         df[cols] = pd.DataFrame(data=vals.to_list(), index=df.index)
         return df

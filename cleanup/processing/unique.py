@@ -43,6 +43,7 @@ class UniqueIDer(Processor):
             i, reason = self.select_index(group)
             df.loc[i, 'unique'] = True
             df.loc[i, 'reason'] = reason
+            # df.loc[idx[idx != i], 'reason'] = f'dup: {idx}'
 
         logger.info(f'{df["unique"].sum()} total unique files')
         return df
@@ -57,7 +58,7 @@ class UniqueIDer(Processor):
         """
         # If there's a priority_keyword
         if self.priority_keyword is not None:
-            if isinstance(self.priority_keyword, Iterable):
+            if isinstance(self.priority_keyword, Iterable) and not isinstance(self.priority_keyword, str):
                 lr = group['path'].apply(str).str.contains('|'.join(self.priority_keyword), case=False)
             else:
                 # Check to see if it shows up in any of the paths
