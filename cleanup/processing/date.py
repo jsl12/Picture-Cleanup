@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 
 from .processor import Processor
-from ..df.utils import scan_date
+from ..df.utils import scan_pathdate
 
 
 @dataclass
@@ -13,7 +13,7 @@ class ScanPathDate(Processor):
     res_col: str = 'pathdate'
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        df[self.res_col] = df[self.source_col].apply(lambda p: scan_date(p))
+        df[self.res_col] = scan_pathdate(df, self.source_col)
         return df
 
 

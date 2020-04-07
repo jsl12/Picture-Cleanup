@@ -17,7 +17,7 @@ class BaseFilenameMaker(Processor):
         self.regexes = [
             re.compile('(?P<trim>_ORG)'),
             re.compile('(?P<trim>[abc]? ?(\(\d+\))$)'),
-            re.compile('(?P<key>^(PANO|R001|_SC|MVI|CIM|VID|ST\w))(?(key).*)(?P<trim>[-_~]\d{1,3}$)'),
+            re.compile('(?P<key>^(PANO|R001|_SC|MVI|CIM|ST\w))(?(key).*)(?P<trim>[-_~]\d{1,3}$)'),
             re.compile('(?P<key>^(DSC|IMG))(?(key).*)(?P<trim>[-_~]\d{1}$)'),
             re.compile('(?P<trim>~\d+)$')
         ]
