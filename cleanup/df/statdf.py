@@ -51,7 +51,7 @@ def stat_df(source,
 
     df = pd.concat(dfs, axis=1)
 
-    if min_size is not None:
+    if min_size is not None and 'st_size' in df.columns:
         df = df[df['st_size'] > min_size]
 
     LOGGER.info(f'converting timestamps: {df.shape[0]} files')
