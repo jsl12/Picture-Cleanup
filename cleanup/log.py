@@ -8,6 +8,15 @@ PATH_REGEX = re.compile('"(.+?)"')
 
 
 def configure(file=None, append=False, stream_level=logging.WARNING, file_level=logging.DEBUG):
+    """
+    Function for easily setting up logging
+
+    :param file:
+    :param append:
+    :param stream_level:
+    :param file_level:
+    :return:
+    """
     log_stream = logging.StreamHandler(sys.stdout)
     log_stream.setLevel(stream_level)
     handlers = [log_stream]

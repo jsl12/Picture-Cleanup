@@ -10,9 +10,10 @@ from .base import BaseFilenameMaker
 from .basic import FolderExcluder, MinFileSize, FileIncluder, ParentCol
 from .date import DateSelector
 from .date import ScanPathDate
+from .dest import DestinationGenerator, DatedDestinationGen
 from .processor import ConvertIfdTag
 from .processor import Processor
-from .unique import UniqueIDer
+from .unique import UniqueIDer, BiggestUnique, MatchingTime
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,11 @@ processor_map = {
     'pathdate': ScanPathDate,
     'convert_ifdtag': ConvertIfdTag,
     'select_date': DateSelector,
-    'duplicates': UniqueIDer
+    'duplicates': UniqueIDer,
+    'dest_gen': DestinationGenerator,
+    'biggest_unique': BiggestUnique,
+    'matching time': MatchingTime,
+    'dated dest': DatedDestinationGen
 }
 
 

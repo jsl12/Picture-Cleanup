@@ -68,3 +68,17 @@ class UniqueIDer(Processor):
                 # If so, return the index of the first path it shows up in
                 return group[lr].index[0], 'priority'
         return group.index[0], 'first in list'
+
+@dataclass
+class BiggestUnique(UniqueIDer):
+    def select_index(self, group: pd.DataFrame):
+        return group['st_size'].idxmax(), 'biggest'
+
+@dataclass
+class MatchingTime(UniqueIDer):
+    def select_index(self, group: pd.DataFrame):
+        matching_dates = group.apply(lambda row: row['st_mtime'].date() == row['filename_date'].date(), axis=1) & group['valid date']
+        if matching_dates.any():
+            return group[matching_dates].index[0], 'matched mtime'
+        else:
+            return group['st_size'].idxmax(), 'biggest'
